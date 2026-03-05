@@ -34,9 +34,13 @@
     "chokidar": "^4.0.3",
     "commander": "^13.0.0",
     "log-update": "^7.0.2",
-    "ora": "^8.1.1"
+    "ora": "^8.1.1",
+    "sql.js": "^1.14.1"
   },
   "publishConfig": {
     "access": "public"
+  },
+  "devDependencies": {
+    "@types/sql.js": "^1.4.9"
   }
 }

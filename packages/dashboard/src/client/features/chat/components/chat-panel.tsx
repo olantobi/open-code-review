@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react'
-import { X, MessageSquare } from 'lucide-react'
+import { X, MessageSquare, Terminal } from 'lucide-react'
 import { cn } from '../../../lib/utils'
 import { useChat } from '../hooks/use-chat'
+import { useAiCli } from '../../../hooks/use-ai-cli'
 import { ChatMessage, StreamingMessage } from './chat-message'
 import { ChatInput } from './chat-input'
 import type { ChatTargetType } from '../../../lib/api-types'
@@ -14,6 +15,7 @@ interface ChatPanelProps {
 }
 
 export function ChatPanel({ sessionId, targetType, targetId, onClose }: ChatPanelProps) {
+  const { isAvailable, isDisabledByConfig } = useAiCli()
   const {
     messages,
     sendMessage,
@@ -69,7 +71,17 @@ export function ChatPanel({ sessionId, targetType, targetId, onClose }: ChatPane
 
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto p-4">
-        {messages.length === 0 && !isStreaming && (
+        {!isAvailable && messages.length === 0 && (
+          <div className="flex items-start gap-2.5 rounded-md border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900/50">
+            <Terminal className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400" />
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              {isDisabledByConfig
+                ? <>AI commands are turned off in your project config. Set <code className="rounded bg-zinc-200 px-1 py-0.5 text-[10px] dark:bg-zinc-800">ai_cli</code> to <code className="rounded bg-zinc-200 px-1 py-0.5 text-[10px] dark:bg-zinc-800">auto</code>, <code className="rounded bg-zinc-200 px-1 py-0.5 text-[10px] dark:bg-zinc-800">claude</code>, or <code className="rounded bg-zinc-200 px-1 py-0.5 text-[10px] dark:bg-zinc-800">opencode</code> in <code className="rounded bg-zinc-200 px-1 py-0.5 text-[10px] dark:bg-zinc-800">.ocr/config.yaml</code> to enable Ask the Team.</>
+                : 'Install Claude Code or OpenCode to use Ask the Team.'}
+            </p>
+          </div>
+        )}
+        {isAvailable && messages.length === 0 && !isStreaming && (
           <p className="text-center text-sm text-zinc-400 dark:text-zinc-500">
             Ask a question about this {targetType === 'map_run' ? 'map' : 'review'} to get
             started.
@@ -96,7 +108,7 @@ export function ChatPanel({ sessionId, targetType, targetId, onClose }: ChatPane
       </div>
 
       {/* Input */}
-      <ChatInput onSend={sendMessage} isStreaming={isStreaming} targetType={targetType} />
+      <ChatInput onSend={sendMessage} isStreaming={isStreaming} disabled={!isAvailable} targetType={targetType} />
     </div>
   )
 }

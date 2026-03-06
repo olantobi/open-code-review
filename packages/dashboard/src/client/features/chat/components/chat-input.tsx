@@ -6,6 +6,7 @@ import type { ChatTargetType } from '../../../lib/api-types'
 interface ChatInputProps {
   onSend: (text: string) => void
   isStreaming: boolean
+  disabled?: boolean
   targetType: ChatTargetType
 }
 
@@ -14,7 +15,7 @@ const placeholders: Record<ChatTargetType, string> = {
   review_round: 'Ask about this review...',
 }
 
-export function ChatInput({ onSend, isStreaming, targetType }: ChatInputProps) {
+export function ChatInput({ onSend, isStreaming, disabled, targetType }: ChatInputProps) {
   const [value, setValue] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -27,7 +28,7 @@ export function ChatInput({ onSend, isStreaming, targetType }: ChatInputProps) {
   }, [])
 
   const handleSend = useCallback(() => {
-    if (!value.trim() || isStreaming) return
+    if (!value.trim() || isStreaming || disabled) return
     onSend(value)
     setValue('')
     if (textareaRef.current) {

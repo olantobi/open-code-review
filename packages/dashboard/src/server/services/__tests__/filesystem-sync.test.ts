@@ -5,139 +5,7 @@ import { tmpdir } from 'node:os'
 import { randomUUID } from 'node:crypto'
 import initSqlJs, { type Database } from 'sql.js'
 import { FilesystemSync } from '../filesystem-sync.js'
-
-// Inline migration SQL for test isolation (mirrors packages/cli/src/lib/db/migrations.ts)
-const SCHEMA_SQL = `
-  CREATE TABLE sessions (
-    id TEXT PRIMARY KEY,
-    branch TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'closed')),
-    workflow_type TEXT NOT NULL CHECK(workflow_type IN ('review', 'map')),
-    current_phase TEXT NOT NULL DEFAULT 'context',
-    phase_number INTEGER NOT NULL DEFAULT 1,
-    current_round INTEGER NOT NULL DEFAULT 1,
-    current_map_run INTEGER NOT NULL DEFAULT 1,
-    started_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    session_dir TEXT NOT NULL
-  );
-
-  CREATE TABLE review_rounds (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
-    round_number INTEGER NOT NULL,
-    verdict TEXT,
-    blocker_count INTEGER DEFAULT 0,
-    suggestion_count INTEGER DEFAULT 0,
-    should_fix_count INTEGER DEFAULT 0,
-    final_md_path TEXT,
-    parsed_at TEXT,
-    UNIQUE(session_id, round_number)
-  );
-
-  CREATE TABLE reviewer_outputs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    round_id INTEGER NOT NULL REFERENCES review_rounds(id) ON DELETE CASCADE,
-    reviewer_type TEXT NOT NULL,
-    instance_number INTEGER NOT NULL DEFAULT 1,
-    file_path TEXT NOT NULL,
-    finding_count INTEGER DEFAULT 0,
-    parsed_at TEXT,
-    UNIQUE(round_id, reviewer_type, instance_number)
-  );
-
-  CREATE TABLE review_findings (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    reviewer_output_id INTEGER NOT NULL REFERENCES reviewer_outputs(id) ON DELETE CASCADE,
-    title TEXT NOT NULL,
-    severity TEXT NOT NULL CHECK(severity IN ('critical', 'high', 'medium', 'low', 'info')),
-    file_path TEXT,
-    line_start INTEGER,
-    line_end INTEGER,
-    summary TEXT,
-    is_blocker INTEGER NOT NULL DEFAULT 0,
-    parsed_at TEXT
-  );
-
-  CREATE TABLE markdown_artifacts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
-    artifact_type TEXT NOT NULL,
-    round_number INTEGER,
-    file_path TEXT NOT NULL,
-    content TEXT NOT NULL,
-    parsed_at TEXT NOT NULL DEFAULT (datetime('now')),
-    UNIQUE(session_id, artifact_type, round_number, file_path)
-  );
-
-  CREATE TABLE map_runs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
-    run_number INTEGER NOT NULL,
-    file_count INTEGER DEFAULT 0,
-    map_md_path TEXT,
-    parsed_at TEXT,
-    UNIQUE(session_id, run_number)
-  );
-
-  CREATE TABLE map_sections (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    map_run_id INTEGER NOT NULL REFERENCES map_runs(id) ON DELETE CASCADE,
-    section_number INTEGER NOT NULL,
-    title TEXT NOT NULL,
-    description TEXT,
-    file_count INTEGER DEFAULT 0,
-    display_order INTEGER NOT NULL DEFAULT 0,
-    UNIQUE(map_run_id, section_number)
-  );
-
-  CREATE TABLE map_files (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    section_id INTEGER NOT NULL REFERENCES map_sections(id) ON DELETE CASCADE,
-    file_path TEXT NOT NULL,
-    role TEXT,
-    lines_added INTEGER DEFAULT 0,
-    lines_deleted INTEGER DEFAULT 0,
-    display_order INTEGER NOT NULL DEFAULT 0,
-    UNIQUE(section_id, file_path)
-  );
-
-  CREATE TABLE orchestration_events (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
-    event_type TEXT NOT NULL,
-    phase TEXT,
-    phase_number INTEGER,
-    round INTEGER,
-    metadata TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-
-  CREATE TABLE user_file_progress (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    map_file_id INTEGER NOT NULL REFERENCES map_files(id) ON DELETE CASCADE,
-    is_reviewed INTEGER NOT NULL DEFAULT 0,
-    reviewed_at TEXT,
-    UNIQUE(map_file_id)
-  );
-
-  CREATE TABLE user_finding_progress (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    finding_id INTEGER NOT NULL REFERENCES review_findings(id) ON DELETE CASCADE,
-    status TEXT NOT NULL DEFAULT 'unread',
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    UNIQUE(finding_id)
-  );
-
-  CREATE TABLE user_notes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    target_type TEXT NOT NULL,
-    target_id TEXT NOT NULL,
-    content TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-`
+import { runMigrations, applyPragmas } from '@open-code-review/cli/db'
 
 let db: Database
 let tmpDir: string
@@ -146,8 +14,8 @@ let sessionsDir: string
 async function createDb(): Promise<Database> {
   const SQL = await initSqlJs()
   const database = new SQL.Database()
-  database.run('PRAGMA foreign_keys = ON;')
-  database.run(SCHEMA_SQL)
+  applyPragmas(database)
+  runMigrations(database)
   return database
 }
 

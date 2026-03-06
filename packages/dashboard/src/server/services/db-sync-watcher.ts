@@ -8,42 +8,19 @@
  */
 
 import { existsSync, readFileSync, statSync } from 'node:fs'
-import { join, dirname } from 'node:path'
-import { createRequire } from 'node:module'
 import { watch, type FSWatcher } from 'chokidar'
 import initSqlJs, { type Database } from 'sql.js'
 import type { Server as SocketIOServer } from 'socket.io'
+import { locateWasm, resultToRows } from '@open-code-review/cli/db'
 
 // ── Types ──
 
 type SqlValue = string | number | null
 
-// ── WASM location (shared with db.ts) ──
-
-function locateWasm(): string {
-  const require = createRequire(import.meta.url)
-  const sqlJsPath = require.resolve('sql.js')
-  return join(dirname(sqlJsPath), 'sql-wasm.wasm')
-}
-
 // ── Helpers ──
 
 /** Row type with guaranteed key access (returns null for missing keys). */
 type Row = { [key: string]: SqlValue }
-
-function resultToRows(
-  result: ReturnType<Database['exec']>,
-): Row[] {
-  if (result.length === 0 || !result[0]) return []
-  const { columns, values } = result[0]
-  return values.map((row) => {
-    const obj: Row = {}
-    for (let i = 0; i < columns.length; i++) {
-      obj[columns[i] as string] = row[i] as SqlValue
-    }
-    return obj
-  })
-}
 
 /** Safe accessor — returns null for missing keys. */
 function col(row: Row, key: string): SqlValue {
@@ -136,8 +113,11 @@ export class DbSyncWatcher {
    * Only syncs `sessions` and `orchestration_events` — these are the tables
    * the CLI writes to via `ocr state` commands. All other tables are
    * dashboard-owned and untouched.
+   *
+   * Public so `saveDb()` can call it before writing (merge-before-write)
+   * to avoid overwriting CLI changes.
    */
-  private syncFromDisk(): void {
+  syncFromDisk(): void {
     if (!this.SQL || !existsSync(this.dbFilePath)) return
 
     // Check if the file actually changed since our last sync
@@ -172,7 +152,7 @@ export class DbSyncWatcher {
    * current_round, current_map_run, workflow_type, updated_at.
    */
   private syncSessions(diskDb: Database): void {
-    const diskSessions = resultToRows(diskDb.exec('SELECT * FROM sessions'))
+    const diskSessions = resultToRows<Row>(diskDb.exec('SELECT * FROM sessions'))
 
     for (const row of diskSessions) {
       const id = col(row, 'id') as string
@@ -183,7 +163,7 @@ export class DbSyncWatcher {
         'SELECT current_phase, phase_number, status, updated_at FROM sessions WHERE id = ?',
         [id],
       )
-      const memRows = resultToRows(memResult)
+      const memRows = resultToRows<Row>(memResult)
 
       if (memRows.length === 0) {
         // Session exists on disk but not in memory — insert it
@@ -243,7 +223,7 @@ export class DbSyncWatcher {
    */
   private syncEvents(diskDb: Database): void {
     // Find the highest event ID currently in memory for each session
-    const diskEvents = resultToRows(
+    const diskEvents = resultToRows<Row>(
       diskDb.exec('SELECT * FROM orchestration_events ORDER BY id ASC'),
     )
 

@@ -35,6 +35,7 @@
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
+    "@open-code-review/cli": "workspace:*",
     "@tailwindcss/vite": "^4.2.1",
     "@types/express": "^5.0.6",
     "@types/react": "^19.2.14",

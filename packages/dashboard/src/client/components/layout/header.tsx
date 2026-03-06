@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Sun, Moon, Monitor } from 'lucide-react'
+import { Sun, Moon, Monitor, Github } from 'lucide-react'
 import { useTheme } from '../../providers/theme-provider'
 import { cn } from '../../lib/utils'
 
@@ -59,14 +59,26 @@ export function Header() {
         ))}
       </nav>
 
-      <button
-        onClick={cycle}
-        className="flex h-8 w-8 items-center justify-center rounded-md text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-        aria-label={`Theme: ${mode}. Click to cycle.`}
-        title={`Theme: ${mode}`}
-      >
-        <ThemeIcon className="h-4 w-4" />
-      </button>
+      <div className="flex items-center gap-1">
+        <a
+          href="https://github.com/spencermarx/open-code-review"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex h-8 w-8 items-center justify-center rounded-md text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+          aria-label="Documentation on GitHub"
+          title="Docs"
+        >
+          <Github className="h-4 w-4" />
+        </a>
+        <button
+          onClick={cycle}
+          className="flex h-8 w-8 items-center justify-center rounded-md text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+          aria-label={`Theme: ${mode}. Click to cycle.`}
+          title={`Theme: ${mode}`}
+        >
+          <ThemeIcon className="h-4 w-4" />
+        </button>
+      </div>
     </header>
   )
 }

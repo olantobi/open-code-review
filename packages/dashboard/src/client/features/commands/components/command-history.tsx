@@ -1,14 +1,8 @@
 import { useState } from 'react'
 import { ChevronDown, ChevronRight, History, RotateCcw } from 'lucide-react'
 import { cn } from '../../../lib/utils'
-import { formatDateTime } from '../../../lib/date-utils'
+import { formatDateTime, formatDuration } from '../../../lib/date-utils'
 import { useCommandHistory, type CommandHistoryEntry } from '../hooks/use-commands'
-
-function formatDuration(ms: number | null | undefined): string {
-  if (ms == null || Number.isNaN(ms)) return '-'
-  if (ms < 1000) return `${ms}ms`
-  return `${(ms / 1000).toFixed(1)}s`
-}
 
 interface HistoryItemProps {
   entry: CommandHistoryEntry

@@ -69,3 +69,14 @@ export function formatElapsed(startedAt: string): string {
   const days = Math.floor(hours / 24)
   return `${days}d`
 }
+
+/**
+ * Format a duration in milliseconds as a human-readable string.
+ *
+ * Example output: "250ms", "1.5s"
+ */
+export function formatDuration(ms: number | null | undefined): string {
+  if (ms == null || Number.isNaN(ms)) return '-'
+  if (ms < 1000) return `${ms}ms`
+  return `${(ms / 1000).toFixed(1)}s`
+}

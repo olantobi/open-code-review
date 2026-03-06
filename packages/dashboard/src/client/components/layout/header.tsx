@@ -1,4 +1,4 @@
-import { useLocation } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { Sun, Moon, Monitor } from 'lucide-react'
 import { useTheme } from '../../providers/theme-provider'
 import { cn } from '../../lib/utils'
@@ -40,15 +40,21 @@ export function Header() {
             {i > 0 && (
               <span className="text-zinc-400 dark:text-zinc-600">/</span>
             )}
-            <span
-              className={cn(
-                i === breadcrumbs.length - 1
-                  ? 'font-medium text-zinc-900 dark:text-zinc-100'
-                  : 'text-zinc-500 dark:text-zinc-400',
-              )}
-            >
-              {crumb.label}
-            </span>
+            {i < breadcrumbs.length - 1 ? (
+              <Link
+                to={crumb.path}
+                className={cn(
+                  'text-zinc-500 dark:text-zinc-400',
+                  'hover:text-zinc-700 dark:hover:text-zinc-200',
+                )}
+              >
+                {crumb.label}
+              </Link>
+            ) : (
+              <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                {crumb.label}
+              </span>
+            )}
           </span>
         ))}
       </nav>

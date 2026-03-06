@@ -125,6 +125,28 @@ export function WorkflowOutput({
             }
 
             // Text content — prose with proper wrapping
+            // Detect markdown headers for appropriate styling
+            const headingMatch = segment.text.match(/^(#{1,6})\s+(.+)/)
+            if (headingMatch) {
+              const level = headingMatch[1].length
+              const text = headingMatch[2]
+              const sizeClass = level <= 2 ? 'text-base font-semibold' : level <= 4 ? 'text-sm font-semibold' : 'text-sm font-medium'
+              return (
+                <div key={i} className={cn(sizeClass, 'mt-3 mb-1 text-zinc-800 dark:text-zinc-200')}>
+                  {text}
+                </div>
+              )
+            }
+
+            // Detect list items
+            if (/^[-*+]\s/.test(segment.text) || /^\d+\.\s/.test(segment.text)) {
+              return (
+                <div key={i} className="ml-4 text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
+                  {segment.text}
+                </div>
+              )
+            }
+
             return (
               <div
                 key={i}
@@ -152,7 +174,7 @@ interface OutputSegment {
   text: string
 }
 
-function parseOutput(raw: string): OutputSegment[] {
+export function parseOutput(raw: string): OutputSegment[] {
   if (!raw) return []
 
   const lines = raw.split('\n')
@@ -175,13 +197,21 @@ function parseOutput(raw: string): OutputSegment[] {
       continue
     }
 
-    // Regular text — merge with previous text segment if it exists
-    // (streaming tokens that form a single paragraph)
-    const prev = segments[segments.length - 1]
-    if (prev && prev.type === 'text') {
-      prev.text += ' ' + trimmed
-    } else {
+    // Regular text
+    // Preserve lines that start with markdown structural characters
+    // (headers, lists, code fences, blockquotes, horizontal rules)
+    const isStructural = /^(#{1,6}\s|[-*+]\s|\d+\.\s|```|>\s|---|\*\*\*|___)/.test(trimmed)
+
+    if (isStructural) {
       segments.push({ type: 'text', text: trimmed })
+    } else {
+      // Merge with previous text segment (streaming tokens forming a paragraph)
+      const prev = segments[segments.length - 1]
+      if (prev && prev.type === 'text') {
+        prev.text += ' ' + trimmed
+      } else {
+        segments.push({ type: 'text', text: trimmed })
+      }
     }
   }
 

@@ -6,6 +6,7 @@ import { Router } from 'express'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { join, dirname, basename } from 'node:path'
+import type { AiCliService } from '../services/ai-cli/index.js'
 
 const VALID_IDES = ['vscode', 'cursor', 'windsurf', 'jetbrains', 'sublime'] as const
 type IdeType = (typeof VALID_IDES)[number]
@@ -68,7 +69,7 @@ function detectGitBranch(cwd: string): string | null {
   }
 }
 
-export function createConfigRouter(ocrDir: string): Router {
+export function createConfigRouter(ocrDir: string, aiCliService: AiCliService): Router {
   const router = Router()
   const projectRoot = dirname(ocrDir)
   const workspaceName = basename(projectRoot)
@@ -80,6 +81,7 @@ export function createConfigRouter(ocrDir: string): Router {
       ide: resolveIde(ocrDir),
       workspaceName,
       gitBranch,
+      aiCli: aiCliService.getStatus(),
     })
   })
 

@@ -26,6 +26,7 @@ import { createStatsRouter } from './routes/stats.js'
 import { createCommandsRouter } from './routes/commands.js'
 import { createConfigRouter } from './routes/config.js'
 import { createChatRouter } from './routes/chat.js'
+import { AiCliService } from './services/ai-cli/index.js'
 import { FilesystemSync } from './services/filesystem-sync.js'
 import { DbSyncWatcher } from './services/db-sync-watcher.js'
 import { registerCommandHandlers } from './socket/command-runner.js'
@@ -126,6 +127,7 @@ export async function startServer(options: StartServerOptions = {}): Promise<voi
 
   // Resolve .ocr directory
   const ocrDir = resolveOcrDir()
+  const aiCliService = new AiCliService(ocrDir)
   const db = await openDb(ocrDir)
 
   // ── PID tracking file ──
@@ -197,7 +199,7 @@ export async function startServer(options: StartServerOptions = {}): Promise<voi
   app.use('/api/notes', createNotesRouter(db, ocrDir))
   app.use('/api/stats', createStatsRouter(db))
   app.use('/api/commands', createCommandsRouter(db))
-  app.use('/api/config', createConfigRouter(ocrDir))
+  app.use('/api/config', createConfigRouter(ocrDir, aiCliService))
   app.use('/api/sessions', createChatRouter(db, ocrDir))
 
   // ── Static file serving (production) ──
@@ -231,9 +233,9 @@ export async function startServer(options: StartServerOptions = {}): Promise<voi
   io.on('connection', (socket) => {
     console.log('Client connected:', socket.id)
     registerSocketHandlers(io, socket)
-    registerCommandHandlers(io, socket, db, ocrDir)
-    registerChatHandlers(io, socket, db, ocrDir)
-    registerPostHandlers(io, socket, db, ocrDir)
+    registerCommandHandlers(io, socket, db, ocrDir, aiCliService)
+    registerChatHandlers(io, socket, db, ocrDir, aiCliService)
+    registerPostHandlers(io, socket, db, ocrDir, aiCliService)
     socket.on('disconnect', () => {
       console.log('Client disconnected:', socket.id)
     })

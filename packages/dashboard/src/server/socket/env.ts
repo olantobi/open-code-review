@@ -1,5 +1,5 @@
 /**
- * Shared environment utilities for spawning Claude CLI processes.
+ * Shared environment utilities for spawning AI CLI processes.
  */
 
 /** Environment variables allowed to pass through to spawned processes. */
@@ -9,6 +9,10 @@ const ENV_ALLOWLIST = [
   'LANG',
   'TERM',
   'ANTHROPIC_API_KEY',
+  // OpenCode may need provider API keys
+  'OPENAI_API_KEY',
+  'OPENCODE_CONFIG',
+  'OPENCODE_CONFIG_DIR',
   'NODE_ENV',
   'SHELL',
   'USER',
@@ -16,7 +20,7 @@ const ENV_ALLOWLIST = [
 ] as const
 
 /**
- * Build a clean env for spawning Claude as a child process.
+ * Build a clean env for spawning an AI CLI as a child process.
  * Uses an allowlist so only known-safe variables are passed through.
  */
 export function cleanEnv(): NodeJS.ProcessEnv {

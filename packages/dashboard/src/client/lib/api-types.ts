@@ -13,6 +13,13 @@ export interface SessionSummary {
   current_map_run: number
   started_at: string
   updated_at: string
+  // Dashboard-derived per-workflow progress (not in CLI schema)
+  has_review: boolean
+  has_map: boolean
+  review_phase_number: number
+  review_phase: string
+  map_phase_number: number
+  map_phase: string
 }
 
 export interface OrchestrationEvent {

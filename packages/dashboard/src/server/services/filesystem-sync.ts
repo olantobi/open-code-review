@@ -404,6 +404,28 @@ export class FilesystemSync {
       }
     }
 
+    // Safety net: if map.md exists but the session is stuck at an earlier phase,
+    // advance to "complete". Handles cases where the AI agent wrote map.md
+    // but crashed or was cancelled before calling `ocr state transition`.
+    const session = queryFirst(
+      this.db,
+      'SELECT current_phase, workflow_type FROM sessions WHERE id = ?',
+      [sessionId],
+    )
+    if (session && session['workflow_type'] === 'map' && session['current_phase'] !== 'complete') {
+      this.db.run(
+        `UPDATE sessions SET current_phase = 'complete', phase_number = 6, status = 'closed', updated_at = datetime('now')
+         WHERE id = ?`,
+        [sessionId],
+      )
+      this.io?.emit('session:updated', {
+        id: sessionId,
+        status: 'closed',
+        current_phase: 'complete',
+        phase_number: 6,
+      })
+    }
+
     // Store raw markdown
     const action = this.upsertMarkdownArtifact(sessionId, 'map', filePath, content, undefined)
     this.emitArtifactEvent(action, {
@@ -546,6 +568,28 @@ export class FilesystemSync {
         'UPDATE review_rounds SET blocker_count = ? WHERE session_id = ? AND round_number = ?',
         [actualBlockers, sessionId, roundNumber],
       )
+    }
+
+    // Safety net: if final.md exists but the session is stuck at an earlier phase,
+    // advance to "complete". This handles cases where the AI agent wrote final.md
+    // but crashed or was cancelled before calling `ocr state transition`.
+    const session = queryFirst(
+      this.db,
+      'SELECT current_phase, phase_number, status FROM sessions WHERE id = ?',
+      [sessionId],
+    )
+    if (session && session['current_phase'] !== 'complete') {
+      this.db.run(
+        `UPDATE sessions SET current_phase = 'complete', phase_number = 8, status = 'closed', updated_at = datetime('now')
+         WHERE id = ?`,
+        [sessionId],
+      )
+      this.io?.emit('session:updated', {
+        id: sessionId,
+        status: 'closed',
+        current_phase: 'complete',
+        phase_number: 8,
+      })
     }
 
     // Store raw markdown

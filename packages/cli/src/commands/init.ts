@@ -16,6 +16,11 @@ import {
 import { injectIntoProjectFiles } from "../lib/injector.js";
 import { printBanner } from "../lib/banner.js";
 import { setConfiguredToolIds } from "../lib/cli-config.js";
+import {
+  checkDependencies,
+  printDepChecks,
+  printCapabilities,
+} from "../lib/deps.js";
 
 export const initCommand = new Command("init")
   .description("Set up OCR for AI coding environments")
@@ -23,6 +28,11 @@ export const initCommand = new Command("init")
   .option("--no-inject", "Skip injecting instructions into AGENTS.md/CLAUDE.md")
   .action(async (options: { tools?: string; inject: boolean }) => {
     printBanner();
+
+    const depResult = checkDependencies();
+    printDepChecks(depResult);
+    printCapabilities(depResult);
+    console.log();
 
     const targetDir = process.cwd();
     let selectedTools: AIToolConfig[];
@@ -39,8 +49,8 @@ export const initCommand = new Command("init")
             `Error: ${error instanceof Error ? error.message : "Invalid tools argument"}`,
           ),
         );
-        console.log();
-        console.log(
+        console.error();
+        console.error(
           chalk.dim(`Valid tool IDs: ${AI_TOOLS.map((t) => t.id).join(", ")}`),
         );
         process.exit(1);
@@ -110,9 +120,9 @@ export const initCommand = new Command("init")
 
     if (failed.length > 0) {
       console.log();
-      console.log(chalk.red("✗ Some installations failed:"));
+      console.error(chalk.red("✗ Some installations failed:"));
       for (const result of failed) {
-        console.log(`  ${chalk.red("✗")} ${result.tool.name}: ${result.error}`);
+        console.error(`  ${chalk.red("✗")} ${result.tool.name}: ${result.error}`);
       }
     }
 
@@ -120,9 +130,9 @@ export const initCommand = new Command("init")
     const allWarnings = results.flatMap((r) => r.warnings ?? []);
     if (allWarnings.length > 0) {
       console.log();
-      console.log(chalk.yellow("⚠ Warnings:"));
+      console.error(chalk.yellow("⚠ Warnings:"));
       for (const warning of allWarnings) {
-        console.log(`  ${chalk.yellow("⚠")} ${warning}`);
+        console.error(`  ${chalk.yellow("⚠")} ${warning}`);
       }
     }
 
@@ -154,12 +164,27 @@ export const initCommand = new Command("init")
     );
     console.log(
       chalk.dim(
-        "     Add project context, review rules, and customize discovery settings.",
+        "     Add project context, review rules, and customize settings.",
       ),
     );
     console.log();
     console.log(
-      `  ${chalk.cyan("2.")} Run ${chalk.yellow("/ocr-review")} to start a code review session.`,
+      `  ${chalk.cyan("2.")} Run ${chalk.yellow("/ocr:review")} in your IDE to start a code review.`,
     );
+    console.log();
+    console.log(
+      `  ${chalk.cyan("3.")} Run ${chalk.yellow("ocr dashboard")} to open the web dashboard.`,
+    );
+    if (depResult.capabilities.dashboardAi) {
+      console.log(
+        chalk.dim("     Command Center and Ask the Team are ready."),
+      );
+    } else {
+      console.log(
+        chalk.dim(
+          "     Read-only mode — install Claude Code or OpenCode for full features.",
+        ),
+      );
+    }
     console.log();
   });

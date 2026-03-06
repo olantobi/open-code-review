@@ -22,7 +22,7 @@
     }
   },
   "release": {
-    "projects": ["packages/*"],
+    "projects": ["packages/*", "!packages/dashboard"],
     "version": {
       "conventionalCommits": true
     },

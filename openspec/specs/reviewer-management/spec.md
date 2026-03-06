@@ -1,7 +1,7 @@
 # reviewer-management Specification
 
 ## Purpose
-TBD - created by archiving change add-ocr-core. Update Purpose after archive.
+Reviewer management governs the creation, configuration, and deployment of AI reviewer personas — the independent "Principal Engineers" that perform code reviews with customizable expertise areas and configurable redundancy.
 ## Requirements
 ### Requirement: Default Reviewer Personas
 

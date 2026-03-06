@@ -4,26 +4,31 @@
   "sourceRoot": "packages/cli/src",
   "projectType": "application",
   "tags": ["scope:cli", "type:app"],
+  "implicitDependencies": ["dashboard"],
   "targets": {
-    "build": {
-      "executor": "@nx/esbuild:esbuild",
-      "outputs": ["{options.outputPath}"],
+    "build:bundle": {
+      "executor": "nx:run-commands",
+      "outputs": ["{projectRoot}/dist/index.js"],
+      "dependsOn": ["^build"],
       "options": {
-        "main": "packages/cli/src/index.ts",
-        "outputPath": "packages/cli/dist",
-        "outputFileName": "index.js",
-        "tsConfig": "packages/cli/tsconfig.json",
-        "format": ["esm"],
-        "platform": "node",
-        "target": "node20",
-        "bundle": true,
-        "minify": false,
-        "esbuildOptions": {
-          "banner": {
-            "js": "#!/usr/bin/env node"
-          }
-        }
+        "command": "node build.mjs",
+        "cwd": "{projectRoot}"
       }
+    },
+    "build:copy-dashboard": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build:bundle"],
+      "options": {
+        "commands": [
+          "rm -rf packages/cli/dist/dashboard",
+          "cp -r packages/dashboard/dist packages/cli/dist/dashboard"
+        ],
+        "parallel": false,
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "build": {
+      "dependsOn": ["build:bundle", "build:copy-dashboard"]
     },
     "dev": {
       "executor": "nx:run-commands",
@@ -50,6 +55,13 @@
       "executor": "nx:run-commands",
       "options": {
         "command": "tsx packages/cli/src/index.ts update",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "doctor": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsx packages/cli/src/index.ts doctor",
         "cwd": "{workspaceRoot}"
       }
     },

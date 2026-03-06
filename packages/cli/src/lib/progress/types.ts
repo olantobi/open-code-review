@@ -2,7 +2,7 @@
  * Progress tracking types - shared across workflow strategies
  */
 
-export type WorkflowType = "review" | "map";
+export type { WorkflowType, SessionStatus } from "../state/types.js";
 
 export type PhaseStatus = "pending" | "in_progress" | "complete";
 
@@ -10,8 +10,6 @@ export type PhaseInfo = {
   key: string;
   label: string;
 };
-
-export type SessionStatus = "active" | "closed";
 
 /**
  * Base state shared by all workflow types
@@ -98,9 +96,9 @@ export type AgentStatus = {
 export type WorkflowState = ReviewWorkflowState | MapWorkflowState;
 
 /**
- * State.json structure (workflow-agnostic parts)
+ * Session state data shape (read from SQLite)
  */
-export type StateJson = {
+export type SessionStateData = {
   session_id: string;
   status?: SessionStatus;
   workflow_type?: WorkflowType;

@@ -3,6 +3,7 @@
  *
  * Watch real-time progress of OCR workflows (review or map).
  * Uses strategy pattern for workflow-specific progress tracking.
+ * Reads session state from SQLite.
  */
 
 import { Command } from "commander";
@@ -17,6 +18,7 @@ import {
   detectWorkflowType,
   detectActiveWorkflows,
   isSessionActive,
+  setProgressDb,
   type WorkflowType,
   type WorkflowState,
   type WorkflowProgressStrategy,
@@ -81,6 +83,25 @@ function getStrategyForSession(
   return getStrategy(workflowType) ?? null;
 }
 
+/**
+ * Try to initialize the SQLite DB for progress reads.
+ * Non-fatal: if DB doesn't exist yet, progress tracking won't be available.
+ */
+async function initProgressDb(ocrDir: string): Promise<void> {
+  const dbPath = join(ocrDir, "data", "ocr.db");
+  if (!existsSync(dbPath)) {
+    return;
+  }
+
+  try {
+    const { openDatabase } = await import("../lib/db/index.js");
+    const db = await openDatabase(dbPath);
+    setProgressDb(db);
+  } catch {
+    // DB init failed; progress tracking unavailable
+  }
+}
+
 type ProgressOptions = {
   session?: string;
   workflow?: WorkflowType;
@@ -111,22 +132,25 @@ export const progressCommand = new Command("progress")
     const sessionsDir = ensureSessionsDir(targetDir);
     const ocrDir = join(targetDir, ".ocr");
 
+    // Initialize SQLite DB for progress reads (non-fatal)
+    await initProgressDb(ocrDir);
+
     // If specific session requested, error if not found
     if (options.session) {
       const sessionPath = join(sessionsDir, options.session);
       if (!existsSync(sessionPath)) {
-        console.log(chalk.red(`Session not found: ${options.session}`));
+        console.error(chalk.red(`Session not found: ${options.session}`));
         process.exit(1);
       }
 
       const strategy = getStrategyForSession(sessionPath, options.workflow);
       if (!strategy) {
-        console.log(
+        console.error(
           chalk.red(
             `Cannot determine workflow type for session ${options.session}`,
           ),
         );
-        console.log(
+        console.error(
           chalk.dim(`Try specifying --workflow review or --workflow map`),
         );
         process.exit(1);
@@ -134,14 +158,14 @@ export const progressCommand = new Command("progress")
 
       let state = strategy.parseState(sessionPath);
       if (!state) {
-        console.log(
+        console.error(
           chalk.red(
-            `Session ${options.session} has no state.json - cannot track progress`,
+            `Session ${options.session} has no state data - cannot track progress`,
           ),
         );
-        console.log(
+        console.error(
           chalk.dim(
-            `The orchestrating agent must create state.json for progress tracking.`,
+            `The orchestrating agent must create state via 'ocr state init' for progress tracking.`,
           ),
         );
         process.exit(1);
@@ -228,7 +252,7 @@ export const progressCommand = new Command("progress")
 
           if (activeWorkflows.length > 1) {
             // Both workflows active - render combined view
-            renderCombinedProgress(currentSessionPath, preservedStartTimes);
+            renderCombinedProgress(currentSessionPath, preservedStartTimes, ocrDir);
             return;
           }
         }
@@ -359,6 +383,7 @@ function renderGenericWaiting(): void {
 function renderCombinedProgress(
   sessionPath: string,
   preservedStartTimes: Record<WorkflowType, number | undefined>,
+  ocrDir: string,
 ): void {
   const lines: string[] = [];
   const session = basename(sessionPath);

@@ -1,10 +1,24 @@
 {
   "name": "@open-code-review/cli",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "CLI for Open Code Review - Multi-environment setup and progress tracking",
   "type": "module",
   "bin": {
     "ocr": "./dist/index.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "source": "./src/index.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./db": {
+      "types": "./src/lib/db/index.ts",
+      "source": "./src/lib/db/index.ts",
+      "import": "./dist/lib/db/index.js",
+      "default": "./dist/lib/db/index.js"
+    }
   },
   "files": [
     "dist"
@@ -34,9 +48,14 @@
     "chokidar": "^4.0.3",
     "commander": "^13.0.0",
     "log-update": "^7.0.2",
-    "ora": "^8.1.1"
+    "ora": "^8.1.1",
+    "socket.io": "^4.8",
+    "sql.js": "^1.14.1"
   },
   "publishConfig": {
     "access": "public"
+  },
+  "devDependencies": {
+    "@types/sql.js": "^1.4.9"
   }
 }

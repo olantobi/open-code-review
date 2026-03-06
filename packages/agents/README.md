@@ -2,6 +2,8 @@
 
 The skill definitions, reviewer personas, and workflow references that power Open Code Review.
 
+> Browse review output and map artifacts in the [Dashboard](../dashboard/README.md) or through your AI assistant's slash commands.
+
 ## What This Package Contains
 
 ```
@@ -24,6 +26,7 @@ agents/
 │       └── reviewer-template.md
 ├── commands/                # Slash command definitions
 │   ├── review.md
+│   ├── map.md
 │   ├── doctor.md
 │   ├── history.md
 │   ├── show.md
@@ -32,6 +35,17 @@ agents/
 └── .claude-plugin/          # Claude Code plugin manifest
     └── plugin.json
 ```
+
+## Prerequisites
+
+All OCR workflows require the CLI for session state management. Before running any review or map command, ensure the CLI is installed:
+
+```bash
+npm install -g @open-code-review/cli
+ocr init
+```
+
+The CLI provides the `ocr state` commands that track workflow progress through each phase. Without it, reviews will fail at phase transitions.
 
 ## Installation
 
@@ -70,13 +84,24 @@ The `SKILL.md` file defines the **Tech Lead** role—the orchestrator that:
 
 Each reviewer in `references/reviewers/` is a specialized persona. You can customize the built-in reviewers or add your own.
 
+### Map Agent Personas
+
+The `/ocr:map` command uses a separate set of specialized agents defined in `references/map-personas/`:
+
+| Persona | Role |
+|---------|------|
+| **Map Architect** | Analyzes change topology, determines optimal section groupings and review ordering |
+| **Flow Analyst** | Traces upstream/downstream dependencies, groups related changes by data and control flow |
+| **Requirements Mapper** | Maps changes to requirements/specs when provided, identifies coverage gaps |
+
+These agents run with configurable redundancy (default: 2) to increase confidence in groupings. See `.ocr/config.yaml` → `code-review-map.agents` for tuning.
+
 ## Session Structure
 
 OCR uses a **round-first architecture** for session storage:
 
 ```
 .ocr/sessions/{YYYY-MM-DD}-{branch}/
-├── state.json              # Workflow state (current_round, phase)
 ├── discovered-standards.md # Project context (shared across rounds)
 ├── context.md              # Change analysis (shared)
 └── rounds/
@@ -86,9 +111,17 @@ OCR uses a **round-first architecture** for session storage:
     │   └── final.md        # Synthesized review
     └── round-2/            # Created on re-review
         └── ...
+├── maps/
+│   ├── run-1/
+│   │   ├── map.md             # Code Review Map output
+│   │   └── flow-analysis.md   # Dependency graph (Mermaid)
+│   └── run-2/                 # Created on re-map
+│       └── ...
 ```
 
 **Multi-round reviews**: Running `/ocr-review` again on an existing session creates a new round (`round-2/`, `round-3/`, etc.) if the previous round is complete. This enables iterative "review → fix → re-review" workflows while preserving history.
+
+**Map runs**: Running `/ocr-map` creates map artifacts in `maps/run-{n}/`. Like review rounds, subsequent runs create new directories without modifying previous ones.
 
 See `references/session-files.md` for the complete file manifest.
 
@@ -97,6 +130,7 @@ See `references/session-files.md` for the complete file manifest.
 | File | Windsurf | Claude Code / Cursor |
 |------|----------|----------------------|
 | `review.md` | `/ocr-review` | `/ocr:review` |
+| `map.md` | `/ocr-map` | `/ocr:map` |
 | `doctor.md` | `/ocr-doctor` | `/ocr:doctor` |
 | `reviewers.md` | `/ocr-reviewers` | `/ocr:reviewers` |
 | `history.md` | `/ocr-history` | `/ocr:history` |

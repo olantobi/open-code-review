@@ -128,6 +128,26 @@ mkdir -p .ocr/sessions
 
 This is safe to do automatically since it's just an empty directory for storing review sessions.
 
+### 5. Verify CLI is Reachable (CLI Mode Only)
+
+The review and map workflows require `ocr state` commands at every phase transition. Verify the CLI is available:
+
+```bash
+ocr --version 2>/dev/null || npx @open-code-review/cli --version 2>/dev/null
+```
+
+**If neither works:**
+```
+⚠ OCR CLI not found in PATH.
+
+The review workflow requires the CLI for state management (ocr state).
+Install it globally or use npx:
+
+  npm install -g @open-code-review/cli
+  # or prefix commands with: npx @open-code-review/cli
+```
+**Then WARN** (do not stop — the user may have the CLI installed elsewhere).
+
 ## Success Response
 
 If all checks pass, respond briefly and proceed:

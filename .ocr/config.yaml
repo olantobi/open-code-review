@@ -98,3 +98,13 @@ discourse:
 github:
   auto_prompt_post: false
   comment_format: "single"  # "single" or "inline"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DASHBOARD
+# ─────────────────────────────────────────────────────────────────────────────
+# IDE integration for "Open in Editor" links.
+# Set to your editor or leave as 'auto' for environment-based detection.
+
+dashboard:
+  ide: auto  # auto | vscode | cursor | windsurf | jetbrains | sublime
+  # ai_cli: claude   # auto | claude | opencode | off — which AI CLI the dashboard uses to run commands

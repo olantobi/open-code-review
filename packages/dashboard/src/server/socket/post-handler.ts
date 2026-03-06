@@ -7,7 +7,8 @@
  */
 
 import { execFile, type ChildProcess } from 'node:child_process'
-import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join, dirname, isAbsolute } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { promisify } from 'node:util'
@@ -15,14 +16,14 @@ import type { Server as SocketIOServer, Socket } from 'socket.io'
 import type { Database } from 'sql.js'
 import { getSession, saveDb } from '../db.js'
 import { cleanEnv } from './env.js'
-import { buildHumanReviewPrompt } from '../prompts/human-review.js'
+import { resolveLocalCli } from './cli-resolver.js'
 import { AiCliService, formatToolDetail, type NormalizedEvent } from '../services/ai-cli/index.js'
-import { startTrackedExecution, type TrackedExecution } from './execution-tracker.js'
+import { startTrackedExecution } from './execution-tracker.js'
 
 const execFileAsync = promisify(execFile)
 
 /** Resolve session_dir to an absolute path. CLI stores relative paths (`.ocr/sessions/...`). */
-function resolveSessionDir(sessionDir: string, ocrDir: string, sessionId: string): string {
+function resolveSessionDir(sessionDir: string, ocrDir: string): string {
   if (isAbsolute(sessionDir)) return sessionDir
   // Resolve relative paths against the project root (parent of `.ocr/`)
   return join(dirname(ocrDir), sessionDir)
@@ -164,6 +165,11 @@ export function registerPostHandlers(
   })
 
   // ── Generate human review via AI CLI adapter ──
+  //
+  // Uses the same spawn pattern as command-runner's spawnAiCommand:
+  // reads the OCR command file, builds a prompt with CLI resolution,
+  // and spawns in workflow mode so the AI can locate files, read the
+  // review material, and write final-human.md itself.
   socket.on('post:generate', (payload: { sessionId: string; roundNumber: number }) => {
     try {
       const { sessionId, roundNumber } = payload ?? {}
@@ -186,9 +192,9 @@ export function registerPostHandlers(
         return
       }
 
-      // Read final.md + all reviewer outputs
+      // Quick validation: ensure the round has a completed review
       const sessionDir = session.session_dir
-        ? resolveSessionDir(session.session_dir, ocrDir, sessionId)
+        ? resolveSessionDir(session.session_dir, ocrDir)
         : join(ocrDir, 'sessions', sessionId)
       const roundDir = join(sessionDir, 'rounds', `round-${roundNumber}`)
       const finalPath = join(roundDir, 'final.md')
@@ -198,65 +204,58 @@ export function registerPostHandlers(
         return
       }
 
-      const finalContent = readFileSync(finalPath, 'utf-8')
+      // Path used to read the result after the AI finishes
+      const humanReviewPath = join(roundDir, 'final-human.md')
 
-      // Collect reviewer outputs
-      const reviewerContents: { name: string; content: string }[] = []
-      const reviewsDir = join(roundDir, 'reviews')
-      if (existsSync(reviewsDir)) {
-        const files = readdirSync(reviewsDir).filter((f) => f.endsWith('.md'))
-        for (const file of files) {
-          reviewerContents.push({
-            name: file.replace(/\.md$/, ''),
-            content: readFileSync(join(reviewsDir, file), 'utf-8'),
-          })
-        }
-      }
-
-      // Build prompt: try command file first, fall back to inline prompt
-      let prompt: string
-      const commandMdPath = join(ocrDir, 'commands', 'translate-review-to-single-human.md')
-      try {
-        const commandContent = readFileSync(commandMdPath, 'utf-8')
-
-        // Build a prompt that injects the source material into the command instructions
-        const promptLines = [
-          'Follow the instructions below to translate this review into a single human-voice PR comment.',
-          '',
-          '## Source Material',
-          '',
-          '<final-review>',
-          finalContent,
-          '</final-review>',
-          '',
-        ]
-
-        for (const reviewer of reviewerContents) {
-          promptLines.push(
-            `<reviewer-output name="${reviewer.name}">`,
-            reviewer.content,
-            '</reviewer-output>',
-            '',
-          )
-        }
-
-        promptLines.push('---', '', commandContent)
-        prompt = promptLines.join('\n')
-      } catch {
-        // Fallback: use inline prompt if command file not found
-        // (backwards compat for users who haven't run ocr update)
-        prompt = buildHumanReviewPrompt(finalContent, reviewerContents)
-      }
-
-      // Spawn via the adapter — use project root (parent of .ocr/) as CWD
+      // Read the OCR command file
       const repoRoot = dirname(ocrDir)
-      const spawnResult = adapter.spawn({
-        prompt,
-        cwd: repoRoot,
-        mode: 'query',
-        maxTurns: 3,
-        allowedTools: ['Read', 'Grep', 'Glob', 'Write'],
-      })
+      const commandMdPath = join(ocrDir, 'commands', 'translate-review-to-single-human.md')
+      let commandContent: string
+      try {
+        commandContent = readFileSync(commandMdPath, 'utf-8')
+      } catch {
+        socket.emit('post:error', {
+          error: `Command file not found: ${commandMdPath}. Run \`ocr init\` to set up.`,
+        })
+        return
+      }
+
+      // Build prompt — same pattern as command-runner's spawnAiCommand
+      const promptLines = [
+        'Follow the instructions below to run the OCR translate-review-to-single-human workflow.',
+        '',
+        `Target: ${sessionId} --round ${roundNumber}`,
+        'Options: none',
+      ]
+
+      // CLI resolution so the AI uses the correct `ocr` binary
+      const localCli = resolveLocalCli()
+      if (localCli) {
+        promptLines.push(
+          '',
+          '## CLI Resolution (IMPORTANT)',
+          '',
+          'The `ocr` CLI may not be globally installed or may be an outdated version.',
+          'For ALL `ocr` commands referenced in the instructions below, use this instead:',
+          '',
+          '```',
+          `node ${localCli} <subcommand> [args]`,
+          '```',
+          '',
+          'Examples:',
+          `- Instead of \`ocr state show\`, run: \`node ${localCli} state show\``,
+          `- Instead of \`ocr state init ...\`, run: \`node ${localCli} state init ...\``,
+          `- Instead of \`ocr state transition ...\`, run: \`node ${localCli} state transition ...\``,
+          '',
+          'This applies to every `ocr` invocation. Do NOT use bare `ocr` commands.',
+        )
+      }
+
+      promptLines.push('', '---', '', commandContent)
+      const prompt = promptLines.join('\n')
+
+      // Spawn via adapter in workflow mode (matches command-runner)
+      const spawnResult = adapter.spawn({ prompt, cwd: repoRoot, mode: 'workflow' })
       const proc = spawnResult.process
 
       // Track process for cancellation
@@ -280,7 +279,6 @@ export function registerPostHandlers(
       // Tracks whether the AI has finished writing final-human.md so we
       // can suppress post-Write conversational text.
       let activeToolName = ''
-      let writeJsonBuf = ''
       let writeDone = false
 
       proc.stdout?.on('data', (chunk: Buffer) => {
@@ -315,11 +313,8 @@ export function registerPostHandlers(
             break
           case 'tool_start':
             if (evt.name === '__input_json_delta') {
-              // Accumulate Write tool's JSON (content is read from file on close).
-              // We don't stream it here — the preview appears cleanly via post:done.
-              if (activeToolName === 'Write') {
-                writeJsonBuf += (evt.input['partial_json'] as string)
-              }
+              // Input accumulation — no action needed here, content is
+              // read from file on close.
             } else {
               // New tool starting — clear any accumulated reasoning text
               if (assistantText) {
@@ -327,9 +322,6 @@ export function registerPostHandlers(
                 socket.emit('post:clear-stream')
               }
               activeToolName = evt.name
-              if (evt.name === 'Write') {
-                writeJsonBuf = ''
-              }
               const detail = formatToolDetail(evt.name, evt.input)
               socket.emit('post:status', { tool: evt.name, detail })
               tracker.appendOutput(`▸ ${detail}\n`)
@@ -363,7 +355,6 @@ export function registerPostHandlers(
         }
 
         // Primary: read the file the AI wrote. Fallback: use captured assistantText.
-        const humanReviewPath = join(roundDir, 'final-human.md')
         let generatedContent = ''
         if (existsSync(humanReviewPath)) {
           try {
@@ -443,7 +434,7 @@ export function registerPostHandlers(
         }
 
         const sessionDir = session.session_dir
-        ? resolveSessionDir(session.session_dir, ocrDir, sessionId)
+        ? resolveSessionDir(session.session_dir, ocrDir)
         : join(ocrDir, 'sessions', sessionId)
         const roundDir = join(sessionDir, 'rounds', `round-${roundNumber}`)
         mkdirSync(roundDir, { recursive: true })
@@ -481,7 +472,7 @@ export function registerPostHandlers(
         tracker.appendOutput(`▸ Posting review to PR #${prNumber}...\n`)
 
         // Write content to temp file for --body-file
-        const tmpDir = join('/tmp', 'ocr-post-comments')
+        const tmpDir = join(tmpdir(), 'ocr-post-comments')
         try { mkdirSync(tmpDir, { recursive: true, mode: 0o700 }) } catch { /* exists */ }
         const tmpFile = join(tmpDir, `${randomUUID()}.md`)
         writeFileSync(tmpFile, content, { mode: 0o600 })

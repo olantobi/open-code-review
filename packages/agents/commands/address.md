@@ -84,7 +84,7 @@ For each feedback item from Step 2:
   - **Invalid — Respectfully Decline**: Feedback is based on a misunderstanding or is incorrect; explain why with code evidence.
   - **Needs Clarification**: Feedback is ambiguous or requires more context to evaluate.
 
-Present the corroboration results to the user as a summary table or list before implementing. Wait for user acknowledgment.
+Present the corroboration results as a summary table or list, then **immediately proceed** to Step 5. Do NOT wait for user acknowledgment — this workflow runs autonomously.
 
 ### 5. Address Feedback
 

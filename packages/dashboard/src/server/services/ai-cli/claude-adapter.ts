@@ -23,7 +23,7 @@ import { cleanEnv } from '../../socket/env.js'
 
 // ── Default Tool Sets ──
 
-const WORKFLOW_TOOLS = ['Read', 'Write', 'Edit', 'Bash', 'Glob', 'Grep', 'TodoWrite', 'TodoRead']
+const WORKFLOW_TOOLS = ['Read', 'Write', 'Edit', 'Bash', 'Glob', 'Grep', 'TodoWrite', 'TodoRead', 'Task']
 const QUERY_TOOLS = ['Read', 'Grep', 'Glob']
 
 export class ClaudeCodeAdapter implements AiCliAdapter {

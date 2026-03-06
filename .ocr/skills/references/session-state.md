@@ -85,6 +85,8 @@ The `ocr progress` command only auto-detects sessions with `status: "active"`. C
 
 Agents MUST use these CLI commands to manage session state. **Do NOT write state files directly.**
 
+> **Note**: These commands require the OCR CLI. Install globally with `npm install -g @open-code-review/cli` or prefix with `npx @open-code-review/cli`.
+
 ### `ocr state init` — Create a new session
 
 ```bash

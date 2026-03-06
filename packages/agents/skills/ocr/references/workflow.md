@@ -4,6 +4,8 @@ Complete 8-phase process for multi-agent code review.
 
 > **CRITICAL**: You MUST call `ocr state transition` **BEFORE starting work** on each phase. The `ocr progress` CLI reads session state for real-time tracking. Transition the `current_phase` and `phase_number` immediately when entering a new phase—do not wait until the phase is complete.
 
+> **PREREQUISITE**: The `ocr` CLI must be installed (`npm install -g @open-code-review/cli`) or accessible via `npx`. Every phase transition calls `ocr state transition`, which requires the CLI.
+
 ---
 
 ## Phase 0: Session State Verification (ALWAYS DO FIRST)

@@ -4,6 +4,8 @@ Complete 6-phase process for generating a Code Review Map.
 
 > **CRITICAL**: You MUST call `ocr state transition` **BEFORE starting work** on each phase. Transition the `current_phase` and `phase_number` immediately when entering a new phase.
 
+> **PREREQUISITE**: The `ocr` CLI must be installed (`npm install -g @open-code-review/cli`) or accessible via `npx`. Every phase transition calls `ocr state transition`, which requires the CLI.
+
 ---
 
 ## Overview

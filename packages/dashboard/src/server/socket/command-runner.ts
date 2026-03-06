@@ -258,13 +258,14 @@ function spawnCliCommand(
   entry: ProcessEntry
 ): void {
   const localCli = resolveLocalCli()
+  const repoRoot = dirname(ocrDir)
   const proc = localCli
     ? spawn('node', [localCli, baseCommand, ...subArgs], {
-        cwd: process.cwd(),
+        cwd: repoRoot,
         env: { ...process.env },
       })
     : spawn('ocr', [baseCommand, ...subArgs], {
-        cwd: process.cwd(),
+        cwd: repoRoot,
         env: { ...process.env },
       })
   entry.process = proc

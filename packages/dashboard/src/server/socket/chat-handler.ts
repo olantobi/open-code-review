@@ -7,6 +7,7 @@
  */
 
 import type { ChildProcess } from 'node:child_process'
+import { dirname } from 'node:path'
 import type { Server as SocketIOServer, Socket } from 'socket.io'
 import type { Database } from 'sql.js'
 import {
@@ -146,9 +147,10 @@ export function registerChatHandlers(
       }
 
       const adapter = aiCliService.getAdapter()!
+      const repoRoot = dirname(ocrDir)
       const spawnResult = adapter.spawn({
         prompt,
-        cwd: process.cwd(),
+        cwd: repoRoot,
         mode: 'query',
         maxTurns: 1,
         allowedTools: ['Read', 'Grep', 'Glob'],

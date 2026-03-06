@@ -13,6 +13,8 @@ import { closeAllDatabases, openDatabase } from "../../db/index.js";
 import {
   stateInit,
   stateTransition,
+  type ReviewPhase,
+  type MapPhase,
 } from "../../state/index.js";
 import { setProgressDb } from "../session-reader.js";
 import { reviewStrategy } from "../review-strategy.js";
@@ -61,7 +63,7 @@ async function initDbAndSession(
   if (phase !== "context" || phaseNumber !== 1) {
     await stateTransition({
       sessionId,
-      phase: phase as import("../../state/types.js").ReviewPhase | import("../../state/types.js").MapPhase,
+      phase: phase as ReviewPhase | MapPhase,
       phaseNumber,
       ocrDir,
     });
@@ -79,7 +81,7 @@ describe("SQLite as primary read source", () => {
   it("review strategy reads phase from SQLite", async () => {
     const dir = await initDbAndSession("sqlite-review", "review", "analysis", 3);
 
-    const state = reviewStrategy.parseState(dir, undefined, ocrDir);
+    const state = reviewStrategy.parseState(dir);
     expect(state).not.toBeNull();
     expect(state?.phase).toBe("analysis");
     expect(state?.phaseNumber).toBe(3);
@@ -89,7 +91,7 @@ describe("SQLite as primary read source", () => {
   it("map strategy reads phase from SQLite", async () => {
     const dir = await initDbAndSession("sqlite-map", "map", "topology", 2);
 
-    const state = mapStrategy.parseState(dir, undefined, ocrDir);
+    const state = mapStrategy.parseState(dir);
     expect(state).not.toBeNull();
     expect(state?.phase).toBe("topology");
     expect(state?.phaseNumber).toBe(2);
@@ -121,7 +123,7 @@ describe("SQLite as primary read source", () => {
     const db = await openDatabase(dbPath);
     setProgressDb(db);
 
-    const state = reviewStrategy.parseState(dir, undefined, ocrDir);
+    const state = reviewStrategy.parseState(dir);
     expect(state).not.toBeNull();
     if (state?.workflowType === "review") {
       expect(state.currentRound).toBe(2);
@@ -131,7 +133,7 @@ describe("SQLite as primary read source", () => {
   it("readSessionState returns data from SQLite", async () => {
     const dir = await initDbAndSession("read-sqlite", "review", "reviews", 4);
 
-    const state = readSessionState(dir, ocrDir);
+    const state = readSessionState(dir);
     expect(state).not.toBeNull();
     expect(state?.current_phase).toBe("reviews");
     expect(state?.phase_number).toBe(4);
@@ -140,11 +142,11 @@ describe("SQLite as primary read source", () => {
   it("preserves startTime across re-parses", async () => {
     const dir = await initDbAndSession("start-time", "review");
 
-    const state1 = reviewStrategy.parseState(dir, undefined, ocrDir);
+    const state1 = reviewStrategy.parseState(dir);
     expect(state1).not.toBeNull();
 
     // Re-parse with preserved start time
-    const state2 = reviewStrategy.parseState(dir, state1?.startTime, ocrDir);
+    const state2 = reviewStrategy.parseState(dir, state1?.startTime);
     expect(state2).not.toBeNull();
     expect(state2?.startTime).toBe(state1?.startTime);
   });
@@ -165,12 +167,6 @@ describe("Waiting state", () => {
   it("readSessionState returns null when no sources available", () => {
     const dir = createSessionDir("nothing");
     const result = readSessionState(dir);
-    expect(result).toBeNull();
-  });
-
-  it("readSessionState returns null when ocrDir has no DB", () => {
-    const dir = createSessionDir("no-db");
-    const result = readSessionState(dir, ocrDir);
     expect(result).toBeNull();
   });
 
@@ -195,7 +191,7 @@ describe("Waiting state", () => {
     setProgressDb(db);
 
     // The closed session should still be readable by exact ID match
-    const state = reviewStrategy.parseState(dir, undefined, ocrDir);
+    const state = reviewStrategy.parseState(dir);
     expect(state).not.toBeNull();
     expect(state?.phase).toBe("complete");
     expect(state?.complete).toBe(true);

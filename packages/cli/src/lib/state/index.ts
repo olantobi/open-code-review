@@ -219,8 +219,8 @@ export async function stateShow(
     session: {
       id: session.id,
       branch: session.branch,
-      status: session.status as "active" | "closed",
-      workflow_type: session.workflow_type as "review" | "map",
+      status: session.status,
+      workflow_type: session.workflow_type,
       current_phase: session.current_phase,
       phase_number: session.phase_number,
       current_round: session.current_round,
@@ -257,8 +257,8 @@ export async function stateList(
   return sessions.map((s) => ({
     id: s.id,
     branch: s.branch,
-    status: s.status as "active" | "closed",
-    workflow_type: s.workflow_type as "review" | "map",
+    status: s.status,
+    workflow_type: s.workflow_type,
     current_phase: s.current_phase,
     phase_number: s.phase_number,
     current_round: s.current_round,

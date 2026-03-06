@@ -93,11 +93,10 @@ export class MapProgressStrategy implements WorkflowProgressStrategy {
   parseState(
     sessionPath: string,
     preservedStartTime?: number,
-    ocrDir?: string,
   ): MapWorkflowState | null {
     const session = basename(sessionPath);
 
-    const state = readSessionState(sessionPath, ocrDir);
+    const state = readSessionState(sessionPath);
     if (!state) {
       return null;
     }

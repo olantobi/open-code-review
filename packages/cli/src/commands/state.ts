@@ -24,7 +24,7 @@ import {
   stateSync,
   resolveActiveSession,
 } from "../lib/state/index.js";
-import type { WorkflowType } from "../lib/state/types.js";
+import type { WorkflowType, ReviewPhase, MapPhase } from "../lib/state/types.js";
 
 // ── init ──
 
@@ -111,7 +111,7 @@ const transitionSubcommand = new Command("transition")
 
         await stateTransition({
           sessionId,
-          phase: options.phase as import("../lib/state/types.js").ReviewPhase | import("../lib/state/types.js").MapPhase,
+          phase: options.phase as ReviewPhase | MapPhase,
           phaseNumber: options.phaseNumber,
           round: options.currentRound,
           mapRun: options.currentMapRun,

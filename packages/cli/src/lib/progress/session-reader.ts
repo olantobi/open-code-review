@@ -7,6 +7,7 @@
 
 import { basename } from "node:path";
 import type { Database } from "sql.js";
+import { resultToRow } from "../db/result-mapper.js";
 import type { SessionStateData } from "./types.js";
 
 // Cached DB reference — set once during progress command startup
@@ -32,12 +33,10 @@ export function getProgressDb(): Database | null {
  * Fully synchronous — requires the DB to be pre-initialized via setProgressDb().
  *
  * @param sessionPath - Path to the session directory
- * @param ocrDir - Path to the .ocr directory (unused, kept for API compat)
  * @returns Session state data or null if no state is available
  */
 export function readSessionState(
   sessionPath: string,
-  ocrDir?: string,
 ): SessionStateData | null {
   if (!cachedDb) {
     return null;
@@ -50,6 +49,18 @@ export function readSessionState(
   }
 }
 
+type SessionDbRow = {
+  id: string;
+  status: "active" | "closed";
+  workflow_type: "review" | "map";
+  current_phase: string;
+  phase_number: number;
+  started_at: string;
+  updated_at: string;
+  current_round: number;
+  current_map_run: number;
+};
+
 /**
  * Reads session state from a pre-opened SQLite database (synchronous).
  */
@@ -60,40 +71,32 @@ function readFromSqlite(
   const sessionId = basename(sessionPath);
 
   // Try exact session ID match first
-  let result = db.exec("SELECT * FROM sessions WHERE id = ?", [sessionId]);
+  let row = resultToRow<SessionDbRow>(
+    db.exec("SELECT * FROM sessions WHERE id = ?", [sessionId]),
+  );
 
   // If no match, try latest active session
-  if (result.length === 0 || result[0]?.values.length === 0) {
-    result = db.exec(
-      "SELECT * FROM sessions WHERE status = 'active' ORDER BY started_at DESC LIMIT 1",
+  if (!row) {
+    row = resultToRow<SessionDbRow>(
+      db.exec(
+        "SELECT * FROM sessions WHERE status = 'active' ORDER BY started_at DESC LIMIT 1",
+      ),
     );
   }
 
-  if (result.length === 0 || !result[0] || result[0].values.length === 0) {
-    return null;
-  }
-
-  const columns = result[0].columns;
-  const row = result[0].values[0];
   if (!row) {
     return null;
   }
 
-  // Build a column→value map
-  const obj: Record<string, unknown> = {};
-  for (let i = 0; i < columns.length; i++) {
-    obj[columns[i] as string] = row[i];
-  }
-
   return {
-    session_id: obj["id"] as string,
-    status: obj["status"] as "active" | "closed",
-    workflow_type: obj["workflow_type"] as "review" | "map",
-    current_phase: obj["current_phase"] as string,
-    phase_number: obj["phase_number"] as number,
-    started_at: obj["started_at"] as string,
-    updated_at: obj["updated_at"] as string,
-    current_round: obj["current_round"] as number,
-    current_map_run: obj["current_map_run"] as number,
+    session_id: row.id,
+    status: row.status,
+    workflow_type: row.workflow_type,
+    current_phase: row.current_phase,
+    phase_number: row.phase_number,
+    started_at: row.started_at,
+    updated_at: row.updated_at,
+    current_round: row.current_round,
+    current_map_run: row.current_map_run,
   };
 }

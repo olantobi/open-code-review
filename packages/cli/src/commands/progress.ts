@@ -156,7 +156,7 @@ export const progressCommand = new Command("progress")
         process.exit(1);
       }
 
-      let state = strategy.parseState(sessionPath, undefined, ocrDir);
+      let state = strategy.parseState(sessionPath);
       if (!state) {
         console.error(
           chalk.red(
@@ -176,7 +176,7 @@ export const progressCommand = new Command("progress")
 
       // Periodic timer update
       const timerInterval = setInterval(() => {
-        const newState = strategy.parseState(sessionPath, preservedStartTime, ocrDir);
+        const newState = strategy.parseState(sessionPath, preservedStartTime);
         if (newState) {
           state = newState;
           strategy.render(state);
@@ -191,7 +191,7 @@ export const progressCommand = new Command("progress")
       });
 
       watcher.on("all", () => {
-        const newState = strategy.parseState(sessionPath, preservedStartTime, ocrDir);
+        const newState = strategy.parseState(sessionPath, preservedStartTime);
         if (newState) {
           state = newState;
           strategy.render(state);
@@ -270,7 +270,6 @@ export const progressCommand = new Command("progress")
           const state = currentStrategy.parseState(
             currentSessionPath,
             preservedStartTimes[workflowType],
-            ocrDir,
           );
           if (state) {
             if (!preservedStartTimes[workflowType]) {
@@ -407,7 +406,6 @@ function renderCombinedProgress(
     const reviewState = reviewStrategy.parseState(
       sessionPath,
       preservedStartTimes.review,
-      ocrDir,
     );
     if (reviewState) {
       const reviewPercent = Math.round(
@@ -438,7 +436,6 @@ function renderCombinedProgress(
     const mapState = mapStrategy.parseState(
       sessionPath,
       preservedStartTimes.map,
-      ocrDir,
     );
     if (mapState) {
       const mapPercent = Math.round(

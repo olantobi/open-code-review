@@ -108,11 +108,10 @@ export class ReviewProgressStrategy implements WorkflowProgressStrategy {
   parseState(
     sessionPath: string,
     preservedStartTime?: number,
-    ocrDir?: string,
   ): ReviewWorkflowState | null {
     const session = basename(sessionPath);
 
-    const state = readSessionState(sessionPath, ocrDir);
+    const state = readSessionState(sessionPath);
     if (!state) {
       return null;
     }

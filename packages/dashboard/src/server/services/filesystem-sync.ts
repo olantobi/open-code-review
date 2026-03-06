@@ -18,6 +18,7 @@ import { parseFinalMd } from './parsers/final-parser.js'
 type ArtifactType =
   | 'reviewer-output'
   | 'final'
+  | 'final-human'
   | 'discourse'
   | 'map'
   | 'flow-analysis'
@@ -129,6 +130,12 @@ export class FilesystemSync {
         const finalPath = join(roundDir, 'final.md')
         if (existsSync(finalPath)) {
           await this.processFinalMd(sessionId, roundNumber, finalPath)
+        }
+
+        // final-human.md (human-voice rewrite)
+        const finalHumanPath = join(roundDir, 'final-human.md')
+        if (existsSync(finalHumanPath)) {
+          await this.processGenericArtifact(sessionId, 'final-human', finalHumanPath, roundNumber)
         }
 
         // Discourse.md
@@ -525,6 +532,22 @@ export class FilesystemSync {
       ],
     )
 
+    // Recount blockers from actual findings (the LLM text in final.md may be inaccurate)
+    const actualBlockers = queryScalar(
+      this.db,
+      `SELECT COUNT(*) FROM review_findings rf
+       JOIN reviewer_outputs ro ON rf.reviewer_output_id = ro.id
+       WHERE ro.round_id = (SELECT id FROM review_rounds WHERE session_id = ? AND round_number = ?)
+         AND rf.is_blocker = 1`,
+      [sessionId, roundNumber],
+    ) as number | null
+    if (actualBlockers !== null && actualBlockers !== parsed.blockerCount) {
+      this.db.run(
+        'UPDATE review_rounds SET blocker_count = ? WHERE session_id = ? AND round_number = ?',
+        [actualBlockers, sessionId, roundNumber],
+      )
+    }
+
     // Store raw markdown
     const action = this.upsertMarkdownArtifact(sessionId, 'final', filePath, content, roundNumber)
     this.emitArtifactEvent(action, {
@@ -645,6 +668,14 @@ export class FilesystemSync {
     if (finalMatch) {
       const roundNumber = parseInt(finalMatch[1] ?? '0', 10)
       await this.processFinalMd(sessionId, roundNumber, filePath)
+      return
+    }
+
+    // rounds/round-N/final-human.md
+    const finalHumanMatch = relFromSessions.match(/rounds\/round-(\d+)\/final-human\.md$/)
+    if (finalHumanMatch) {
+      const roundNumber = parseInt(finalHumanMatch[1] ?? '0', 10)
+      await this.processGenericArtifact(sessionId, 'final-human', filePath, roundNumber)
       return
     }
 

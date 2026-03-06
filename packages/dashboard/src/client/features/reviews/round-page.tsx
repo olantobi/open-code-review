@@ -11,6 +11,7 @@ import {
 } from '../../components/markdown/discourse-block'
 import { MarkdownRenderer } from '../../components/markdown/markdown-renderer'
 import { ChatPanel } from '../chat/components/chat-panel'
+import { PostReviewDialog } from './components/post-review-dialog'
 
 export function RoundPage() {
   const { id: sessionId, round: roundStr } = useParams<{
@@ -23,6 +24,7 @@ export function RoundPage() {
   const { data: findings } = useRoundFindings(sessionId ?? '', roundNumber)
 
   const { data: finalArtifact } = useArtifact(sessionId ?? '', 'final')
+  const { data: finalHumanArtifact } = useArtifact(sessionId ?? '', 'final-human')
   const { data: discourseArtifact } = useArtifact(sessionId ?? '', 'discourse')
 
   const [showDiscourse, setShowDiscourse] = useState(false)
@@ -69,14 +71,24 @@ export function RoundPage() {
             {(round.reviewer_outputs ?? []).length !== 1 ? 's' : ''}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setChatOpen(true)}
-          className="inline-flex items-center gap-1.5 rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-        >
-          <MessageSquare className="h-3.5 w-3.5" />
-          Ask the Team
-        </button>
+        <div className="flex items-center gap-2">
+          {finalArtifact && (
+            <PostReviewDialog
+              sessionId={sessionId ?? ''}
+              roundNumber={roundNumber}
+              finalContent={finalArtifact.content}
+              savedHumanReview={finalHumanArtifact?.content}
+            />
+          )}
+          <button
+            type="button"
+            onClick={() => setChatOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+          >
+            <MessageSquare className="h-3.5 w-3.5" />
+            Ask the Team
+          </button>
+        </div>
       </div>
 
       {/* Verdict Banner */}

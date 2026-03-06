@@ -1,6 +1,6 @@
-import type { SessionStatus, WorkflowType, FindingTriage, FindingSeverity, ChatTargetType, RoundTriage } from '../../shared/types'
+import type { SessionStatus, WorkflowType, FindingTriage, FindingSeverity, ChatTargetType, RoundTriage, PostReviewStep } from '../../shared/types'
 
-export type { SessionStatus, WorkflowType, FindingTriage, FindingSeverity, ChatTargetType, RoundTriage }
+export type { SessionStatus, WorkflowType, FindingTriage, FindingSeverity, ChatTargetType, RoundTriage, PostReviewStep }
 
 export interface SessionSummary {
   id: string
@@ -163,4 +163,12 @@ export interface ChatToolStatus {
   tool: string
   detail: string
   timestamp: number
+}
+
+export interface PostCheckResult {
+  authenticated: boolean
+  prNumber: number | null
+  prUrl: string | null
+  branch: string | null
+  error?: string
 }

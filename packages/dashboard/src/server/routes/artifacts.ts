@@ -11,6 +11,7 @@ const VALID_ARTIFACT_TYPES = new Set([
   'discovered-standards',
   'discourse',
   'final',
+  'final-human',
   'map',
   'flow-analysis',
   'topology',
@@ -48,7 +49,8 @@ export function createArtifactsRouter(db: Database): Router {
 
       res.json(artifact)
     } catch (err) {
-      res.status(500).json({ error: 'Failed to fetch artifact', detail: String(err) })
+      console.error('Failed to fetch artifact:', err)
+      res.status(500).json({ error: 'Failed to fetch artifact' })
     }
   })
 

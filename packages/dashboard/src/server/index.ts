@@ -14,7 +14,7 @@ import { randomBytes } from 'node:crypto'
 import { Server as SocketIOServer } from 'socket.io'
 
 import { resolveOcrDir } from './services/ocr-resolver.js'
-import { openDb, closeDb, saveDb, getAllRounds, getReviewerOutputsForRound, getRoundProgress } from './db.js'
+import { openDb, closeDb, saveDb, registerSaveHooks, getAllRounds, getReviewerOutputsForRound, getRoundProgress } from './db.js'
 import { registerSocketHandlers } from './socket/handlers.js'
 import { createSessionsRouter } from './routes/sessions.js'
 import { createReviewsRouter } from './routes/reviews.js'
@@ -251,27 +251,26 @@ export async function startServer(options: StartServerOptions = {}): Promise<voi
   const dbFilePath = join(ocrDir, 'data', 'ocr.db')
   const dbSyncWatcher = new DbSyncWatcher(db, dbFilePath, io, () => {
     saveDb(db, ocrDir)
-    dbSyncWatcher.markOwnWrite()
   })
   await dbSyncWatcher.init()
   dbSyncWatcher.startWatching()
   console.log(`Watching DB: ${dbFilePath}`)
 
-  // Helper: save + mark own write so the watcher doesn't re-trigger.
-  // Passes syncFromDisk as preSaveSync to merge CLI changes before overwriting.
-  const saveAndMark = (): void => {
-    saveDb(db, ocrDir, () => dbSyncWatcher.syncFromDisk())
-    dbSyncWatcher.markOwnWrite()
-  }
+  // Register global save hooks so every saveDb() call automatically
+  // merges CLI changes before writing and marks its own write.
+  registerSaveHooks(
+    () => dbSyncWatcher.syncFromDisk(),
+    () => dbSyncWatcher.markOwnWrite(),
+  )
 
   // ── Filesystem sync ──
   // Parses .ocr/sessions/ markdown artifacts into SQLite,
   // then watches for live changes from CLI / agent workflows.
 
   const sessionsDir = join(ocrDir, 'sessions')
-  const fsSync = new FilesystemSync(db, sessionsDir, io, saveAndMark)
+  const fsSync = new FilesystemSync(db, sessionsDir, io, () => saveDb(db, ocrDir))
   await fsSync.fullScan()
-  saveAndMark()
+  saveDb(db, ocrDir)
   fsSync.startWatching()
   console.log(`Watching sessions: ${sessionsDir}`)
 

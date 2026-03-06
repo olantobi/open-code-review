@@ -208,6 +208,28 @@ export type ChatMessageRow = {
 let cachedDb: Database | null = null
 let cachedDbPath: string | null = null
 
+// ── Pre/post-save hooks ──
+// Registered once at startup by index.ts so every saveDb() call
+// automatically merges CLI changes before writing (pre) and
+// marks its own write to avoid re-triggering the file watcher (post).
+
+let preSaveHook: (() => void) | null = null
+let postSaveHook: (() => void) | null = null
+
+/**
+ * Register hooks that run around every saveDb() call.
+ *
+ * - `preSave`: merge external (CLI) changes before overwriting — prevents data loss.
+ * - `postSave`: mark own write so the file watcher doesn't re-trigger.
+ */
+export function registerSaveHooks(
+  preSave: () => void,
+  postSave: () => void,
+): void {
+  preSaveHook = preSave
+  postSaveHook = postSave
+}
+
 /**
  * Opens the OCR database at the given `.ocr/` directory path.
  * Caches the connection for reuse.
@@ -250,15 +272,17 @@ export async function openDb(ocrDir: string): Promise<Database> {
 /**
  * Saves the in-memory database state to disk.
  *
- * Accepts an optional `preSaveSync` callback that runs before writing.
- * The dashboard passes DbSyncWatcher.syncFromDisk() here to pull in
- * any CLI changes before overwriting the file (merge-before-write).
+ * Automatically calls registered pre-save and post-save hooks:
+ * - Pre-save: merges external (CLI) changes before overwriting (merge-before-write).
+ * - Post-save: marks own write so the file watcher doesn't re-trigger.
+ *
+ * Hooks are registered once at startup via `registerSaveHooks()`.
  *
  * Uses atomic write (temp file + rename) to prevent partial reads
  * by concurrent processes.
  */
-export function saveDb(db: Database, ocrDir: string, preSaveSync?: () => void): void {
-  preSaveSync?.()
+export function saveDb(db: Database, ocrDir: string): void {
+  preSaveHook?.()
   const dbPath = join(ocrDir, 'data', 'ocr.db')
   const data = db.export()
   const dir = dirname(dbPath)
@@ -268,6 +292,7 @@ export function saveDb(db: Database, ocrDir: string, preSaveSync?: () => void): 
   const tmpPath = dbPath + '.tmp'
   writeFileSync(tmpPath, Buffer.from(data))
   renameSync(tmpPath, dbPath)
+  postSaveHook?.()
 }
 
 /**

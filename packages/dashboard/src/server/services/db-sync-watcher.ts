@@ -114,7 +114,7 @@ export class DbSyncWatcher {
    * the CLI writes to via `ocr state` commands. All other tables are
    * dashboard-owned and untouched.
    *
-   * Public so `saveDb()` can call it before writing (merge-before-write)
+   * Public for direct use; also called automatically via registered save hooks
    * to avoid overwriting CLI changes.
    */
   syncFromDisk(): void {
@@ -265,7 +265,7 @@ export class DbSyncWatcher {
 
   /**
    * Record current mtime after the dashboard writes to disk.
-   * Call this after saveDb() to prevent re-syncing our own writes.
+   * Called automatically via registered save hooks after saveDb().
    */
   markOwnWrite(): void {
     try {

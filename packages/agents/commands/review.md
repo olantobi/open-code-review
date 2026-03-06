@@ -65,9 +65,10 @@ ocr state show
 ### Step 3: Determine action
 
 - **If `--fresh` flag**: Delete the session directory and start from Phase 1
-- **If no state in SQLite but files exist**: Use `ocr state init` to recreate the session, then set correct phase via `ocr state transition`
-- **If state exists and files match**: Resume from `current_phase`
-- **If state and files mismatch**: Report discrepancy and ask user which to trust
+- **If session exists and status is `closed`**: Start new round (round-{n+1}) — reuse existing `discovered-standards.md` and `context.md`, create new `rounds/round-{n+1}/` directory
+- **If session exists, status is `active`, and files match**: Resume from `current_phase`
+- **If session exists but state and files mismatch**: Report discrepancy and ask user which to trust
+- **If no state in SQLite but session files exist**: Start new round — use `ocr state init` to recreate the session, then start round-{n+1} from Phase 4 (reuse existing standards and context)
 - **If no session exists**: Start fresh from Phase 1
 
 ---

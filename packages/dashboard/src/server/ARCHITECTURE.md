@@ -49,8 +49,8 @@ strategy:
 3. Only then does it write the full database back to disk
 
 This ensures CLI writes (which may have happened between dashboard saves)
-are never overwritten. The `saveDb()` function accepts an optional
-`preSaveSync` callback for this purpose.
+are never overwritten. The `saveDb()` function automatically calls
+registered pre/post-save hooks (via `registerSaveHooks()`) for this purpose.
 
 ## Atomic Write Pattern
 

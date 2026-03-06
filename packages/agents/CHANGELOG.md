@@ -1,3 +1,13 @@
+## 1.5.1 (2026-03-06)
+
+### 🚀 Features
+
+- **cli:** add managed .gitignore block system for .ocr directory ([f17a1de](https://github.com/spencermarx/open-code-review/commit/f17a1de))
+
+### ❤️ Thank You
+
+- Spencer Marx
+
 ## 1.5.0 (2026-03-06)
 
 ### 🚀 Features

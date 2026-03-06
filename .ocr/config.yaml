@@ -107,3 +107,4 @@ github:
 
 dashboard:
   ide: auto  # auto | vscode | cursor | windsurf | jetbrains | sublime
+  # ai_cli: claude   # auto | claude | opencode | off — which AI CLI the dashboard uses to run commands

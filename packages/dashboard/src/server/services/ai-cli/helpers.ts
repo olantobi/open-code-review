@@ -6,6 +6,7 @@
  */
 
 import { mkdirSync, writeFileSync, unlinkSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 
@@ -57,7 +58,7 @@ export function extractAssistantText(parsed: Record<string, unknown>): string {
 // ── Temp File Management ──
 // Writes prompts to secure temp files and provides cleanup.
 
-const TEMP_BASE = join('/tmp', 'ocr-ai-prompts')
+const TEMP_BASE = join(tmpdir(), 'ocr-ai-prompts')
 
 export function writeTempPrompt(prompt: string): string {
   try { mkdirSync(TEMP_BASE, { recursive: true, mode: 0o700 }) } catch { /* exists */ }

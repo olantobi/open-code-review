@@ -13,6 +13,10 @@ const ENV_ALLOWLIST = [
   'OPENAI_API_KEY',
   'OPENCODE_CONFIG',
   'OPENCODE_CONFIG_DIR',
+  // GitHub CLI auth — gh reads GH_TOKEN / GITHUB_TOKEN when not using
+  // `gh auth login` (CI environments, act-runner, etc.)
+  'GH_TOKEN',
+  'GITHUB_TOKEN',
   'NODE_ENV',
   'SHELL',
   'USER',

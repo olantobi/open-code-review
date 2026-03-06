@@ -23,7 +23,7 @@ export type NormalizedEvent =
 
 export type SpawnMode = 'workflow' | 'query'
 
-export interface SpawnOptions {
+export type SpawnOptions = {
   /** The prompt text to send to the AI CLI */
   prompt: string
   /** Working directory for the spawned process */
@@ -38,7 +38,7 @@ export interface SpawnOptions {
   resumeSessionId?: string
 }
 
-export interface SpawnResult {
+export type SpawnResult = {
   process: ChildProcess
   /** Whether the process was spawned detached (enables process group kill) */
   detached: boolean
@@ -46,12 +46,13 @@ export interface SpawnResult {
 
 // ── Detection ──
 
-export interface DetectionResult {
+export type DetectionResult = {
   found: boolean
   version?: string
 }
 
 // ── Adapter Interface ──
+// Kept as interface because it is used with `implements` by adapter classes.
 
 export interface AiCliAdapter {
   /** Human-readable name (e.g., 'Claude Code', 'OpenCode') */
@@ -68,7 +69,7 @@ export interface AiCliAdapter {
 
 // ── Service Status ──
 
-export interface AiCliStatus {
+export type AiCliStatus = {
   /** Which AI CLIs are installed (e.g., ['claude', 'opencode']) */
   available: string[]
   /** Which CLI is actively being used (null if none available) */

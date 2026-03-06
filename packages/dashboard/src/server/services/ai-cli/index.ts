@@ -26,7 +26,7 @@ export { OpenCodeAdapter } from './opencode-adapter.js'
 
 type AiCliPreference = 'auto' | 'claude' | 'opencode' | 'off'
 
-interface AdapterEntry {
+type AdapterEntry = {
   adapter: AiCliAdapter
   detection: DetectionResult
 }

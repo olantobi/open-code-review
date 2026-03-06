@@ -44,7 +44,7 @@ const MAP_PHASE_NAMES = [
 
 // ── Enrichment ──
 
-interface EnrichedSession extends SessionRow {
+type EnrichedSession = SessionRow & {
   has_review: boolean
   has_map: boolean
   review_phase_number: number

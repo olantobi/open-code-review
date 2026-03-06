@@ -2,7 +2,7 @@ import type { SessionStatus, WorkflowType, FindingTriage, FindingSeverity, ChatT
 
 export type { SessionStatus, WorkflowType, FindingTriage, FindingSeverity, ChatTargetType, RoundTriage, PostReviewStep }
 
-export interface SessionSummary {
+export type SessionSummary = {
   id: string
   branch: string
   status: SessionStatus
@@ -25,7 +25,7 @@ export interface SessionSummary {
   latest_round_status: string | null
 }
 
-export interface OrchestrationEvent {
+export type OrchestrationEvent = {
   id: number
   session_id: string
   event_type: string
@@ -36,7 +36,7 @@ export interface OrchestrationEvent {
   created_at: string
 }
 
-export interface DashboardStats {
+export type DashboardStats = {
   totalSessions: number
   activeSessions: number
   completedReviews: number
@@ -45,7 +45,7 @@ export interface DashboardStats {
   unresolvedBlockers: number
 }
 
-export interface ReviewRound {
+export type ReviewRound = {
   id: number
   session_id: string
   round_number: number
@@ -59,7 +59,7 @@ export interface ReviewRound {
   progress?: RoundProgress | null
 }
 
-export interface ReviewerOutput {
+export type ReviewerOutput = {
   id: number
   round_id: number
   reviewer_type: string
@@ -69,7 +69,7 @@ export interface ReviewerOutput {
   parsed_at: string | null
 }
 
-export interface Finding {
+export type Finding = {
   id: number
   reviewer_output_id: number
   title: string
@@ -83,25 +83,25 @@ export interface Finding {
   progress?: FindingProgress | null
 }
 
-export interface FindingProgress {
+export type FindingProgress = {
   id: number
   finding_id: number
   status: FindingTriage
   updated_at: string
 }
 
-export interface RoundProgress {
+export type RoundProgress = {
   id: number
   round_id: number
   status: RoundTriage
   updated_at: string
 }
 
-export interface ReviewerOutputDetail extends ReviewerOutput {
+export type ReviewerOutputDetail = ReviewerOutput & {
   findings: Finding[]
 }
 
-export interface Artifact {
+export type Artifact = {
   id: number
   session_id: string
   artifact_type: string
@@ -111,7 +111,7 @@ export interface Artifact {
   parsed_at: string
 }
 
-export interface MapRun {
+export type MapRun = {
   id: number
   session_id: string
   run_number: number
@@ -120,7 +120,7 @@ export interface MapRun {
   sections: MapSection[]
 }
 
-export interface MapSection {
+export type MapSection = {
   id: number
   map_run_id: number
   section_number: number
@@ -131,7 +131,7 @@ export interface MapSection {
   files: MapFile[]
 }
 
-export interface MapFile {
+export type MapFile = {
   id: number
   section_id: number
   file_path: string
@@ -143,7 +143,7 @@ export interface MapFile {
   reviewed_at: string | null
 }
 
-export interface SectionDependency {
+export type SectionDependency = {
   fromSection: number
   fromTitle: string
   toSection: number
@@ -151,7 +151,7 @@ export interface SectionDependency {
   relationship: string
 }
 
-export interface ChatConversation {
+export type ChatConversation = {
   id: string
   session_id: string
   target_type: ChatTargetType
@@ -161,7 +161,7 @@ export interface ChatConversation {
   last_active_at: string
 }
 
-export interface ChatMessage {
+export type ChatMessage = {
   id: number
   conversation_id: string
   role: 'user' | 'assistant'
@@ -169,13 +169,13 @@ export interface ChatMessage {
   created_at: string
 }
 
-export interface ChatToolStatus {
+export type ChatToolStatus = {
   tool: string
   detail: string
   timestamp: number
 }
 
-export interface PostCheckResult {
+export type PostCheckResult = {
   authenticated: boolean
   prNumber: number | null
   prUrl: string | null

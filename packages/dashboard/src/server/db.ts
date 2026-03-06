@@ -41,6 +41,8 @@ import {
   applyPragmas,
   resultToRows,
   resultToRow,
+  type WorkflowType,
+  type SessionStatus,
 } from '@open-code-review/cli/db'
 
 // ── Types ──
@@ -48,8 +50,8 @@ import {
 export type SessionRow = {
   id: string
   branch: string
-  status: 'active' | 'closed'
-  workflow_type: 'review' | 'map'
+  status: SessionStatus
+  workflow_type: WorkflowType
   current_phase: string
   phase_number: number
   current_round: number
@@ -748,7 +750,7 @@ export function deleteConversation(db: Database, conversationId: string): void {
 
 // ── Stats queries ──
 
-export interface StatsResult {
+export type StatsResult = {
   total_sessions: number
   active_sessions: number
   completed_reviews: number

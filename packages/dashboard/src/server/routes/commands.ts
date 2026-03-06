@@ -7,7 +7,7 @@ import type { Database } from 'sql.js'
 import { getCommandHistory } from '../db.js'
 import { getActiveCommands } from '../socket/command-runner.js'
 
-interface CommandDefinition {
+type CommandDefinition = {
   name: string
   description: string
   usage: string

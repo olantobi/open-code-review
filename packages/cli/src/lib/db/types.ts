@@ -4,9 +4,7 @@
 
 // ── Session types ──
 
-export type WorkflowType = "review" | "map";
-
-export type SessionStatus = "active" | "closed";
+export type { WorkflowType, SessionStatus } from "../state/types.js";
 
 export type SessionRow = {
   id: string;

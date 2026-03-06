@@ -10,31 +10,7 @@ import type {
   SessionRow,
   UpdateSessionParams,
 } from "./types.js";
-
-// ── Helpers ──
-// Local generic row-mapping utilities to avoid circular imports with ./index.js
-// which re-exports from this file.
-
-type ExecResult = ReturnType<import("sql.js").Database["exec"]>;
-
-function resultToRows<T>(result: ExecResult): T[] {
-  if (result.length === 0 || !result[0]) {
-    return [];
-  }
-  const { columns, values } = result[0];
-  return values.map((row) => {
-    const obj: Record<string, unknown> = {};
-    for (let i = 0; i < columns.length; i++) {
-      obj[columns[i] as string] = row[i];
-    }
-    return obj as T;
-  });
-}
-
-function resultToRow<T>(result: ExecResult): T | undefined {
-  const rows = resultToRows<T>(result);
-  return rows[0];
-}
+import { resultToRows, resultToRow } from "./result-mapper.js";
 
 // ── Sessions ──
 

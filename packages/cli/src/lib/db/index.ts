@@ -37,36 +37,7 @@ export type { WorkflowType, SessionStatus } from "../state/types.js";
 
 export { runMigrations, MIGRATIONS } from "./migrations.js";
 
-// ── Generic query helpers ──
-
-/**
- * Converts a sql.js exec() result set into an array of typed row objects.
- */
-export function resultToRows<T>(
-  result: ReturnType<import("sql.js").Database["exec"]>,
-): T[] {
-  if (result.length === 0 || !result[0]) {
-    return [];
-  }
-  const { columns, values } = result[0];
-  return values.map((row) => {
-    const obj: Record<string, unknown> = {};
-    for (let i = 0; i < columns.length; i++) {
-      obj[columns[i] as string] = row[i];
-    }
-    return obj as T;
-  });
-}
-
-/**
- * Converts a sql.js exec() result set into a single typed row, or undefined.
- */
-export function resultToRow<T>(
-  result: ReturnType<import("sql.js").Database["exec"]>,
-): T | undefined {
-  const rows = resultToRows<T>(result);
-  return rows[0];
-}
+export { resultToRows, resultToRow } from "./result-mapper.js";
 
 // ── Connection cache ──
 

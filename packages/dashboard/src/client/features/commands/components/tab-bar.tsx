@@ -1,4 +1,4 @@
-import { X, CheckCircle2, XCircle } from 'lucide-react'
+import { X, Ban, CheckCircle2, XCircle } from 'lucide-react'
 import { cn } from '../../../lib/utils'
 import type { CommandTab } from '../../../providers/command-state-provider'
 
@@ -37,6 +37,8 @@ export function TabBar({ tabs, activeTabId, onSelectTab, onDismissTab }: TabBarP
               </span>
             ) : tab.status === 'complete' ? (
               <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+            ) : tab.status === 'cancelled' ? (
+              <Ban className="h-3 w-3 text-amber-500" />
             ) : (
               <XCircle className="h-3 w-3 text-red-500" />
             )}

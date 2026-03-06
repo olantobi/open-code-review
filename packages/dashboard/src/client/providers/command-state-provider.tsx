@@ -20,7 +20,7 @@ import {
 import { useSocket, useSocketEvent } from './socket-provider'
 import { fetchApi } from '../lib/utils'
 
-export type TabStatus = 'running' | 'complete' | 'failed'
+export type TabStatus = 'running' | 'complete' | 'cancelled' | 'failed'
 
 export interface CommandTab {
   executionId: number
@@ -148,7 +148,7 @@ export function CommandStateProvider({ children }: { children: ReactNode }) {
         const next = new Map(prev)
         next.set(data.execution_id, {
           ...existing,
-          status: data.exitCode === 0 ? 'complete' : 'failed',
+          status: data.exitCode === -2 ? 'cancelled' : data.exitCode === 0 ? 'complete' : 'failed',
           exitCode: data.exitCode,
         })
         return next

@@ -57,6 +57,8 @@ interface ProcessEntry {
   startedAt: string
   /** Whether the process was spawned with detached: true (supports process group kill). */
   detached: boolean
+  /** Set to true by the cancel handler so the close handler can use exit code -2. */
+  cancelled: boolean
 }
 
 /** Active commands keyed by execution_id */
@@ -169,6 +171,7 @@ export function registerCommandHandlers(
         commandStr: command,
         startedAt: startedAt,
         detached: isAi,
+        cancelled: false,
       }
       activeCommands.set(executionId, entry)
 
@@ -210,6 +213,8 @@ export function registerCommandHandlers(
 
       const entry = activeCommands.get(targetId)
       if (!entry) return
+
+      entry.cancelled = true
 
       const proc = entry.process
       if (!proc) return  // Process not yet spawned
@@ -277,7 +282,8 @@ function spawnCliCommand(
   })
 
   proc.on('close', (code) => {
-    finishExecution(io, db, ocrDir, executionId, code, entry.outputBuffer)
+    const finalCode = code ?? (entry.cancelled ? -2 : -1)
+    finishExecution(io, db, ocrDir, executionId, finalCode, entry.outputBuffer)
   })
 
   proc.on('error', (err) => {
@@ -484,7 +490,8 @@ function spawnAiCommand(
       io.emit('command:output', { execution_id: executionId, content: errContent })
     }
 
-    finishExecution(io, db, ocrDir, executionId, code, entry.outputBuffer)
+    const finalCode = code ?? (entry.cancelled ? -2 : -1)
+    finishExecution(io, db, ocrDir, executionId, finalCode, entry.outputBuffer)
   })
 
   proc.on('error', (err) => {

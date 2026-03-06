@@ -87,10 +87,12 @@ export function WorkflowOutput({
                 'inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium',
                 exitCode === 0
                   ? 'border-emerald-500/25 bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
-                  : 'border-red-500/25 bg-red-500/15 text-red-700 dark:text-red-400',
+                  : exitCode === -2
+                    ? 'border-amber-500/25 bg-amber-500/15 text-amber-700 dark:text-amber-400'
+                    : 'border-red-500/25 bg-red-500/15 text-red-700 dark:text-red-400',
               )}
             >
-              {exitCode === 0 ? 'Complete' : `Exit: ${exitCode}`}
+              {exitCode === 0 ? 'Complete' : exitCode === -2 ? 'Cancelled' : `Exit: ${exitCode}`}
             </span>
           )}
         </div>

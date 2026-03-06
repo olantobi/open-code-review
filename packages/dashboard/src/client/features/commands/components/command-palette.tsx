@@ -156,8 +156,10 @@ export function CommandPalette({ isRunning, runningCount, onRunCommand, prefill,
   }
 
   function handleConfirm() {
+    const cmd = buildCommandString()
     setConfirming(false)
-    onRunCommand(buildCommandString())
+    setParamValues({})
+    onRunCommand(cmd)
   }
 
   return (

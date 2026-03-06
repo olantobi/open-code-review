@@ -1,7 +1,7 @@
 # sqlite-state Specification
 
 ## Purpose
-TBD - created by archiving change add-dashboard. Update Purpose after archive.
+The SQLite state layer provides a durable, concurrent-safe single source of truth for all OCR data — workflow state, parsed artifacts, and user interactions — shared by the CLI, AI agents, and dashboard server via `.ocr/data/ocr.db`.
 ## Requirements
 ### Requirement: SQLite as Single Source of Truth
 

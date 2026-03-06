@@ -1,7 +1,7 @@
 # dashboard Specification
 
 ## Purpose
-TBD - created by archiving change add-dashboard. Update Purpose after archive.
+The dashboard provides a browser-based interactive interface for exploring OCR review sessions, navigating Code Review Maps, triaging findings, managing AI-powered operations (reviews, maps, chat, post-to-GitHub, address feedback), and tracking command execution — all with real-time updates via Socket.IO.
 ## Requirements
 ### Requirement: Session List
 
@@ -806,4 +806,231 @@ The dashboard SHALL provide a generic `SortableHeader` component for use across 
 - **WHEN** the developer uses `SortableHeader<T>`
 - **THEN** it renders a `<th>` with sort direction indicators and click handler
 - **AND** it accepts a generic field type parameter for type-safe sort state
+
+---
+
+### Requirement: AI CLI Adapter Strategy
+
+The dashboard server SHALL use a strategy pattern to detect, select, and interact with AI CLI tools (Claude Code, OpenCode) for spawning AI operations.
+
+#### Scenario: Adapter detection on startup
+
+- **GIVEN** the dashboard server is starting
+- **WHEN** initialization completes
+- **THEN** the server SHALL check for `claude` and `opencode` binaries in PATH
+- **AND** the server SHALL select the first available binary as the active adapter
+- **AND** the active adapter name SHALL be exposed via the `/api/config` endpoint
+
+#### Scenario: Adapter unavailable
+
+- **GIVEN** no AI CLI binary (`claude` or `opencode`) is found in PATH
+- **WHEN** the server attempts to initialize the AI CLI adapter
+- **THEN** `aiCli.active` SHALL be `null`
+- **AND** all AI-dependent features (chat, translate, address) SHALL emit descriptive error events when invoked
+- **AND** the error events SHALL indicate that no AI CLI was detected
+
+#### Scenario: Adapter spawning
+
+- **GIVEN** an active adapter has been detected
+- **WHEN** the server needs to spawn an AI operation
+- **THEN** the adapter SHALL spawn its CLI with `--output-format stream-json --max-turns N` flags
+- **AND** the adapter SHALL return a `ChildProcess` handle and a `parseLine()` method
+- **AND** `parseLine()` SHALL normalize raw CLI output into the standard event union
+
+#### Scenario: Normalized event stream
+
+- **GIVEN** an adapter has spawned a CLI process
+- **WHEN** the CLI emits raw output lines
+- **THEN** the adapter's `parseLine()` SHALL parse each line into one of the normalized event types: `text`, `thinking`, `tool_start`, `tool_end`, `full_text`, `session_id`, `error`
+- **AND** unrecognized lines SHALL be silently discarded
+
+#### Scenario: Client capability detection
+
+- **GIVEN** the dashboard client is loading
+- **WHEN** the client fetches `GET /api/config`
+- **THEN** the response SHALL include `aiCli.active` indicating the detected adapter name or `null`
+- **AND** the client SHALL render capability-aware UI based on this value (e.g., AddressFeedbackPopover shows run mode when active, copy mode when null)
+
+---
+
+### Requirement: Unified Execution Tracking
+
+The dashboard SHALL track all AI operations (CLI commands, chat, post-to-GitHub, translate-to-human) in a single `command_executions` table, with real-time lifecycle events via Socket.IO.
+
+#### Scenario: Execution lifecycle events
+
+- **GIVEN** an AI operation is initiated
+- **WHEN** the server begins executing the operation
+- **THEN** a row SHALL be inserted via `startTrackedExecution()` with operation type, args, and start timestamp
+- **AND** the server SHALL emit a `command:started` Socket.IO event with the execution ID
+- **AND** output SHALL be streamed as `command:output` events
+- **AND** upon completion, the server SHALL emit `command:finished` with exit code and end timestamp
+
+#### Scenario: Active commands tab
+
+- **GIVEN** one or more AI operations are currently executing
+- **WHEN** the user opens the Commands page
+- **THEN** all in-progress executions SHALL appear in the "Active" tab bar
+- **AND** each active entry SHALL show: operation type, elapsed time, and a live output stream
+
+#### Scenario: Command history
+
+- **GIVEN** AI operations have completed
+- **WHEN** the user views the Commands page history
+- **THEN** completed executions SHALL be listed with: command name, arguments, start timestamp, end timestamp, and exit code
+- **AND** history SHALL be sorted by start timestamp descending
+
+#### Scenario: Tracked operation types
+
+- **WHEN** any of the following operations execute
+- **THEN** they SHALL be tracked in the `command_executions` table: `ocr review`, `ocr map`, `ocr chat (map)`, `ocr chat (review)`, `ocr translate-review-to-single-human`, `ocr post-to-github`, `ocr address`
+
+---
+
+### Requirement: Ask the Team Chat
+
+The dashboard SHALL provide an "Ask the Team" chat feature that allows users to have AI-assisted conversations about specific review rounds or map runs, with session persistence.
+
+#### Scenario: Chat initiation
+
+- **GIVEN** the user is viewing a review round or map run page
+- **WHEN** the user clicks "Ask the Team"
+- **THEN** a chat panel SHALL open scoped to that specific round or map run
+- **AND** the panel SHALL display any existing conversation history for that target
+
+#### Scenario: Context injection
+
+- **GIVEN** a new conversation is started for a round or map run
+- **WHEN** the first user message is sent
+- **THEN** the server SHALL build context by reading the relevant review or map artifacts
+- **AND** the context SHALL be injected as a system-level preamble so the AI understands the subject matter
+
+#### Scenario: Session resumption
+
+- **GIVEN** a conversation already exists for a round or map run
+- **WHEN** the user sends a subsequent message
+- **THEN** the server SHALL resume the Claude session via `resumeSessionId`
+- **AND** the AI SHALL maintain full conversational continuity from prior messages
+
+#### Scenario: Real-time streaming
+
+- **GIVEN** the AI is generating a response
+- **WHEN** tokens are produced
+- **THEN** they SHALL be emitted as `chat:token` Socket.IO events
+- **AND** thinking and tool usage SHALL be emitted as `chat:status` events
+- **AND** the client SHALL render tokens incrementally as they arrive
+
+#### Scenario: Message persistence
+
+- **GIVEN** a user sends a message or the AI responds
+- **WHEN** the message is complete
+- **THEN** it SHALL be saved to the `chat_messages` table with role, content, and timestamp
+- **AND** the full conversation SHALL be loadable via a `chat:history` request
+
+#### Scenario: Conversation lifecycle
+
+- **GIVEN** a conversation exists
+- **WHEN** 48 hours pass without any new messages
+- **THEN** the conversation SHALL be marked as expired
+- **AND** on server shutdown, all active chat processes SHALL be cleaned up via SIGTERM
+
+#### Scenario: Allowed tools
+
+- **GIVEN** the AI is processing a chat message
+- **WHEN** the AI attempts to use tools
+- **THEN** only read-only tools SHALL be permitted: `Read`, `Grep`, `Glob`
+- **AND** any tool not in the allowed list MUST be rejected
+
+---
+
+### Requirement: Address Feedback Popover
+
+The dashboard SHALL provide a capability-aware "Address Feedback" action on review round pages that allows users to initiate feedback processing.
+
+#### Scenario: Button visibility
+
+- **GIVEN** a review round page is displayed
+- **WHEN** `final.md` exists for the round
+- **THEN** the "Address Feedback" button SHALL be visible
+- **AND** when `final.md` does not exist, the button SHALL be hidden
+
+#### Scenario: AI CLI available (run mode)
+
+- **GIVEN** `aiCli.active` is truthy (an AI CLI adapter is detected)
+- **WHEN** the user clicks "Address Feedback"
+- **THEN** a popover SHALL appear showing: the review path, an optional notes textarea, a command preview (`ocr address <path> [--requirements <notes>]`), a security warning about AI execution, and a two-step confirmation flow (Run then Confirm)
+
+#### Scenario: AI CLI unavailable (copy mode)
+
+- **GIVEN** `aiCli.active` is falsy (no AI CLI adapter is detected)
+- **WHEN** the user clicks "Address Feedback"
+- **THEN** a popover SHALL appear showing: the review path, an "Include AI prompt" checkbox (default: checked), and a copy-to-clipboard button
+- **AND** the copy action SHALL copy the review path and, when checked, a portable prompt for use in an external AI tool
+
+#### Scenario: Command execution
+
+- **GIVEN** the popover is in run mode and the user has entered optional notes
+- **WHEN** the user clicks "Run" and then "Confirm"
+- **THEN** the client SHALL emit a `command:run` Socket.IO event with the built command string
+- **AND** the client SHALL navigate to `/commands` to show the execution output
+
+---
+
+### Requirement: Enhanced Command Center
+
+The dashboard Command Center SHALL support running AI-powered OCR commands (review, map) with a command palette, confirmation flow, and concurrent execution tracking.
+
+#### Scenario: Command palette commands
+
+- **WHEN** the user opens the command palette
+- **THEN** two launchable AI commands SHALL be available: `ocr review` (listed first) and `ocr map` (listed second)
+- **AND** each command SHALL have configurable parameters: Target (file/directory path), Requirements (freeform text), and Fresh Start (boolean toggle)
+
+#### Scenario: Server-accepted AI commands
+
+- **GIVEN** the server receives a `command:run` Socket.IO event
+- **WHEN** the command matches one of the accepted types
+- **THEN** the server SHALL accept and execute: `map`, `review`, `translate-review-to-single-human`, `address`
+- **AND** unrecognized command types SHALL be rejected with an error event
+
+#### Scenario: Confirmation flow
+
+- **GIVEN** the user has configured command parameters in the palette
+- **WHEN** the user clicks "Run"
+- **THEN** a confirmation overlay SHALL appear showing: the full command string, a security notice about AI execution, and Start/Cancel buttons
+- **AND** execution SHALL only begin when the user clicks "Start"
+
+#### Scenario: Re-run from history
+
+- **GIVEN** completed commands appear in the command history
+- **WHEN** the user clicks the re-run action on a history entry
+- **THEN** the command palette SHALL open with parameters prefilled from the parsed historical command
+- **AND** the user SHALL be able to modify parameters before running
+
+---
+
+### Requirement: Database Sync Watcher
+
+The dashboard server SHALL poll the SQLite database for external changes (writes from CLI/agents) and emit Socket.IO events when data changes.
+
+#### Scenario: Polling interval
+
+- **GIVEN** the dashboard server is running
+- **WHEN** the Database Sync Watcher is active
+- **THEN** it SHALL poll at a configurable interval (default: 2 seconds) by checking the file mtime of `ocr.db`
+
+#### Scenario: Change detection
+
+- **GIVEN** the watcher detects that `ocr.db` mtime has changed since the last poll
+- **WHEN** the watcher processes the change
+- **THEN** it SHALL reload relevant data from the database
+- **AND** it SHALL emit scoped Socket.IO events for any data that has changed (e.g., `session:updated`, `phase:changed`)
+
+#### Scenario: Coexistence with FilesystemSync
+
+- **GIVEN** both Database Sync Watcher and FilesystemSync are active
+- **WHEN** external changes occur
+- **THEN** Database Sync Watcher SHALL handle SQLite-originated changes (from `ocr state` CLI commands)
+- **AND** FilesystemSync SHALL handle filesystem-originated changes (markdown artifacts in `.ocr/sessions/`)
+- **AND** the two watchers SHALL NOT conflict or duplicate event emissions for the same logical change
 

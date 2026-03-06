@@ -1,7 +1,7 @@
 # slash-commands Specification
 
 ## Purpose
-TBD - created by archiving change add-ocr-core. Update Purpose after archive.
+Slash commands provide the agent-side interface for all OCR operations — reviews, maps, diagnostics, history, posting, feedback addressing, and reviewer management — invocable through AI coding tools like Claude Code, Cursor, and Windsurf.
 ## Requirements
 ### Requirement: Review Command
 
@@ -180,4 +180,108 @@ All OCR commands SHALL be namespaced under `/ocr:` to prevent conflicts.
 - **GIVEN** user invokes `/help`
 - **WHEN** help is displayed
 - **THEN** OCR commands SHALL appear grouped under the `ocr` namespace
+
+---
+
+### Requirement: Address Command
+
+The system SHALL provide `/ocr:address` for processing and implementing code review feedback from a review's `final.md`.
+
+#### Scenario: Command structure
+- **GIVEN** user wants to address review feedback
+- **WHEN** they invoke `/ocr:address [path]`
+- **THEN** the command SHALL accept:
+  - Optional path to `final.md` (auto-detected from current session if omitted)
+  - Optional `--requirements` for additional notes/constraints
+
+#### Scenario: Auto-detection
+- **GIVEN** user invokes `/ocr:address` without a path
+- **WHEN** the command resolves inputs
+- **THEN** it SHALL read session state via `ocr state show` and resolve the latest round's `final.md`
+
+#### Scenario: 6-step workflow
+- **GIVEN** user invokes `/ocr:address`
+- **WHEN** the command executes
+- **THEN** it SHALL follow a 6-step workflow:
+  1. Resolve inputs
+  2. Parse and catalog feedback items
+  3. Gather context from referenced files
+  4. Corroborate and validate each item
+  5. Address valid feedback with parallel sub-agents
+  6. Report and verify
+
+#### Scenario: Corroboration guardrails
+- **GIVEN** review feedback items are parsed
+- **WHEN** the command corroborates each item
+- **THEN** the command SHALL NOT blindly accept feedback; each item MUST be classified as:
+  - Valid (will address)
+  - Valid (alternative approach)
+  - Invalid (decline with evidence)
+  - Needs Clarification
+
+#### Scenario: Parallel implementation
+- **GIVEN** feedback items are classified as valid and independent
+- **WHEN** the command addresses them
+- **THEN** it SHALL spawn sub-agents in parallel to implement changes concurrently
+
+---
+
+### Requirement: Translate Review to Human Command
+
+The system SHALL provide a mechanism to translate multi-reviewer synthesis into a single human-voice PR comment.
+
+#### Scenario: Invocation
+- **GIVEN** a completed review round exists
+- **WHEN** the translate operation is triggered from the dashboard "Post to GitHub" flow
+- **THEN** it SHALL execute as part of that flow, not as a standalone slash command
+
+#### Scenario: Input
+- **GIVEN** the translate operation is triggered
+- **WHEN** it reads source material
+- **THEN** it SHALL read `final.md` and all reviewer output files from the round directory
+
+#### Scenario: Output
+- **GIVEN** the translate operation completes
+- **WHEN** the result is produced
+- **THEN** it SHALL produce a GitHub-flavored markdown comment that reads as if written by a single human developer, following Google code review guidelines for tone
+
+### Requirement: Map Command
+
+The system SHALL provide `/ocr:map` as the command for generating code review maps.
+
+#### Scenario: Command structure
+- **GIVEN** user wants to generate a review map
+- **WHEN** they invoke `/ocr:map`
+- **THEN** the command SHALL accept:
+  - Optional target: `staged` (default), `HEAD~N..HEAD`, `pr <number>`, or `<commit-range>`
+  - Optional requirements reference (inline or document path)
+  - Optional `--summary` flag for condensed output on large change sets
+
+#### Scenario: Help text
+- **GIVEN** user invokes `/ocr:map --help` or views command in `/help`
+- **WHEN** help is displayed
+- **THEN** it SHALL show:
+  - Command description explaining the review map purpose
+  - Argument hints for target and requirements
+  - Examples of common usage patterns
+
+#### Scenario: Map staged changes (default)
+- **GIVEN** user invokes `/ocr:map` without arguments
+- **WHEN** staged changes exist in the repository
+- **THEN** the system SHALL generate a review map for staged changes
+
+#### Scenario: Map commit range
+- **GIVEN** user invokes `/ocr:map HEAD~5..HEAD`
+- **WHEN** the commit range is valid
+- **THEN** the system SHALL generate a review map for the specified range
+
+#### Scenario: Map pull request
+- **GIVEN** user invokes `/ocr:map pr 123`
+- **WHEN** PR #123 exists and `gh` CLI is available
+- **THEN** the system SHALL generate a review map for the pull request diff
+
+#### Scenario: Map with requirements
+- **GIVEN** user invokes `/ocr:map` with requirements context
+- **WHEN** requirements are provided inline or by reference
+- **THEN** the system SHALL include requirements mapping in the output
 

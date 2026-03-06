@@ -42,15 +42,20 @@ context: |
   
   ## Architecture
   
-  Two-package monorepo:
+  Three-package monorepo:
   - `packages/agents/` — Skills, commands, reviewer personas (pure markdown)
-  - `packages/cli/` — TypeScript CLI for installation and session management
+  - `packages/cli/` — TypeScript CLI for installation, session management, and dashboard hosting
+  - `packages/dashboard/` — React + Socket.IO dashboard for interactive session exploration
   
   Key patterns:
   - Config-based context discovery (.ocr/config.yaml)
   - OpenSpec integration for pulling project context and specs
   - Multi-agent orchestration (Tech Lead → Reviewers → Discourse → Synthesis)
   - Session storage in .ocr/sessions/{date}-{branch}/
+  - AI CLI adapter strategy (Claude Code / OpenCode detection and abstraction)
+  - Unified execution tracking for all AI operations
+  - SQLite three-layer schema (workflow state, artifacts, user interaction)
+  - Tiered capability model (IDE-only → Dashboard Viewer → Dashboard AI → GitHub-integrated)
   
   ## Key Design Decisions
   
@@ -61,6 +66,10 @@ context: |
   | Pure markdown skills | No runtime dependencies for agent assets; maximum portability |
   | TypeScript CLI | Modern tooling for installation, updates, and session management |
   | Redundancy configuration | Critical reviewers can run multiple times for higher confidence |
+  | AI CLI adapter strategy | Supports multiple AI CLIs (Claude Code, OpenCode) via normalized event stream |
+  | SQLite single source of truth | Replaces state.json for reliable concurrent access from CLI, agents, and dashboard |
+  | Dashboard embedded in CLI | Zero-install dashboard served from CLI dist; `ocr dashboard` just works |
+  | Execution tracking | All AI operations (review, map, chat, post, address) tracked in unified command_executions table |
   
   ## Important Constraints
   
@@ -179,6 +188,11 @@ domain:
     context_discovery: Loading project standards from config.yaml and references
     tech_lead: Orchestrating agent that coordinates the review process
     session: Review artifacts stored in .ocr/sessions/{date}-{branch}/
+    map: Code Review Map that groups files into logical sections for navigating large changesets
+    address: Workflow for corroborating and implementing code review feedback from final.md
+    chat: AI-assisted conversation about specific review rounds or map runs
+    dashboard: Browser-based interactive interface for session exploration and AI operations
+    execution_tracking: Unified logging of all AI CLI operations with real-time lifecycle events
   
   review_targets:
     - Staged changes (default)
@@ -198,3 +212,4 @@ dependencies:
   
   optional:
     - GitHub CLI (gh) for PR posting and review features
+    - AI CLI tool (Claude Code or OpenCode) for dashboard AI features (chat, translate, address)

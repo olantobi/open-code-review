@@ -1,7 +1,7 @@
 # cli Specification
 
 ## Purpose
-TBD - created by archiving change add-ocr-cli. Update Purpose after archive.
+The CLI package provides the primary user-facing interface for installing, configuring, and managing Open Code Review across AI coding environments. It handles initialization, dependency checking, asset management, session progress tracking, state management, and serves the interactive dashboard.
 ## Requirements
 ### Requirement: CLI Package Distribution
 

@@ -41,15 +41,15 @@
 - [x] 6.1 Define map artifact storage with runs structure (`map/runs/run-{n}/`)
 - [x] 6.2 Update state.json schema for map phases and `current_map_run`
 - [x] 6.3 Implement map run tracking (parallel to review rounds)
-- [ ] 6.4 Add `--map` and `--run` flags to `/ocr:show` command
+- [x] ~~6.4 Add `--map` and `--run` flags to `/ocr:show` command~~ — Removed: dashboard provides rich map viewing; show command kept focused on reviews
 
 ## 7. Validation & Testing
 
 - [x] 7.1 Add completeness validation step to workflow
-- [ ] 7.2 Test with small change set (< 5 files)
-- [ ] 7.3 Test with medium change set (10-20 files)
-- [ ] 7.4 Test with large change set (50+ files)
-- [ ] 7.5 Verify all files appear in map output
+- [x] 7.2 Test with small change set (< 5 files)
+- [x] 7.3 Test with medium change set (10-20 files)
+- [x] 7.4 Test with large change set (50+ files)
+- [x] 7.5 Verify all files appear in map output
 
 ## 8. Natural Language Map Reference
 
@@ -73,26 +73,26 @@
 
 ### 10.4 README Documentation (Positioning)
 
-- [ ] 10.4.1 Add "Code Review Map" section to main README explaining:
+- [x] 10.4.1 Add "Code Review Map" section to main README explaining:
   - Primary audience is humans — exhaustive output for last line of defense
   - Standalone `/ocr:map` command for changeset navigation
   - Map and review are orthogonal tools that complement each other
-- [ ] 10.4.2 Document "When to Use Map":
+- [x] 10.4.2 Document "When to Use Map":
   - Extremely large changesets (would take multiple hours for human review)
   - Need a navigation aid to track progress through many files
   - Want to understand structure before diving into details
-- [ ] 10.4.3 Document "Why Review Alone is Usually Sufficient":
+- [x] 10.4.3 Document "Why Review Alone is Usually Sufficient":
   - Tech Lead and reviewers already perform upstream/downstream investigation
   - Lighter-weight context gathering is token-efficient
   - Sufficient for the vast majority of changesets
   - Map uses additional redundant specialized agents — valuable for humans, typically overkill for AI
-- [ ] 10.4.4 Add "Using Both Tools" subsection:
+- [x] 10.4.4 Add "Using Both Tools" subsection:
   - Run `/ocr:map` first for yourself as a human navigation aid
   - Run `/ocr:review` for AI feedback
   - Outputs complement each other for the human reviewer
   - Can reference existing map in review via natural language if desired
-- [ ] 10.4.5 Add configuration examples for different scenarios:
+- [x] 10.4.5 Add configuration examples for different scenarios:
   - Default config (2x redundancy)
   - Large codebase config (3-4x redundancy)
   - Speed-optimized config (1x, no redundancy)
-- [ ] 10.5 Update packages/agents README with map agent personas
+- [x] 10.5 Update packages/agents README with map agent personas

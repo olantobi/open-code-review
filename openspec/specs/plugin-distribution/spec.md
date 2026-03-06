@@ -1,7 +1,7 @@
 # plugin-distribution Specification
 
 ## Purpose
-TBD - created by archiving change add-ocr-core. Update Purpose after archive.
+Plugin distribution defines how OCR is packaged and installed across AI coding environments — as a Claude Code plugin, npm package, or cross-platform installation — following the Agent Skills standard for maximum portability.
 ## Requirements
 ### Requirement: Claude Code Plugin Structure
 

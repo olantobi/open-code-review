@@ -35,13 +35,63 @@ export type {
 } from "./types.js";
 
 /**
- * Initialize a new session in SQLite.
+ * Initialize a session in SQLite.
+ *
+ * If the session already exists (e.g. round-1 completed and closed),
+ * re-opens it for the next round instead of failing silently on the
+ * UNIQUE constraint.
  */
 export async function stateInit(params: InitParams): Promise<string> {
   const { sessionId, branch, workflowType, sessionDir, ocrDir } = params;
   const db = await ensureDatabase(ocrDir);
   const dbPath = join(ocrDir, "data", "ocr.db");
 
+  const existing = getSession(db, sessionId);
+
+  if (existing) {
+    // Session exists — determine the correct round from filesystem
+    const roundsDir = join(sessionDir, "rounds");
+    let nextRound = 1;
+
+    if (existsSync(roundsDir)) {
+      const roundDirs = readdirSync(roundsDir)
+        .filter((d) => /^round-\d+$/.test(d))
+        .map((d) => parseInt(d.replace("round-", ""), 10))
+        .sort((a, b) => a - b);
+
+      if (roundDirs.length > 0) {
+        const highest = roundDirs[roundDirs.length - 1]!;
+        const hasFinal = existsSync(
+          join(roundsDir, `round-${highest}`, "final.md"),
+        );
+        nextRound = hasFinal ? highest + 1 : highest;
+      }
+    }
+
+    // Re-open the session for the next round
+    updateSession(db, sessionId, {
+      status: "active",
+      current_phase: "context",
+      phase_number: 1,
+      current_round: nextRound,
+    });
+
+    insertEvent(db, {
+      session_id: sessionId,
+      event_type:
+        nextRound > (existing.current_round ?? 1)
+          ? "round_started"
+          : "session_resumed",
+      phase: "context",
+      phase_number: 1,
+      round: nextRound,
+    });
+
+    saveDatabase(db, dbPath);
+    return sessionId;
+  }
+
+  // New session — original path
   insertSession(db, {
     id: sessionId,
     branch,

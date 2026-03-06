@@ -6,6 +6,10 @@
   "bin": {
     "ocr": "./dist/index.js"
   },
+  "exports": {
+    ".": "./src/index.ts",
+    "./db": "./src/lib/db/index.ts"
+  },
   "files": [
     "dist"
   ],
@@ -35,6 +39,7 @@
     "commander": "^13.0.0",
     "log-update": "^7.0.2",
     "ora": "^8.1.1",
+    "socket.io": "^4.8",
     "sql.js": "^1.14.1"
   },
   "publishConfig": {

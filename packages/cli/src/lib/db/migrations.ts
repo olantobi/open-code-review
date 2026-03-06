@@ -160,6 +160,39 @@ const MIGRATIONS: Migration[] = [
       );
     `,
   },
+  {
+    version: 2,
+    description: "Add chat conversations, messages, and round progress tables",
+    sql: `
+      CREATE TABLE IF NOT EXISTS chat_conversations (
+        id TEXT PRIMARY KEY,
+        session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+        target_type TEXT NOT NULL CHECK(target_type IN ('map_run', 'review_round')),
+        target_id INTEGER NOT NULL,
+        claude_session_id TEXT,
+        status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'expired')),
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        last_active_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+
+      CREATE TABLE IF NOT EXISTS chat_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        conversation_id TEXT NOT NULL REFERENCES chat_conversations(id) ON DELETE CASCADE,
+        role TEXT NOT NULL CHECK(role IN ('user', 'assistant')),
+        content TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+
+      CREATE TABLE IF NOT EXISTS user_round_progress (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        round_id INTEGER NOT NULL REFERENCES review_rounds(id) ON DELETE CASCADE,
+        status TEXT NOT NULL DEFAULT 'needs_review'
+          CHECK(status IN ('needs_review', 'in_progress', 'changes_made', 'acknowledged', 'dismissed')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE(round_id)
+      );
+    `,
+  },
 ];
 
 /**

@@ -5,7 +5,7 @@
  * The database lives at `.ocr/data/ocr.db` within a project.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { createRequire } from "node:module";
 import initSqlJs, { type Database } from "sql.js";
@@ -35,6 +35,37 @@ export {
 
 export { runMigrations, MIGRATIONS } from "./migrations.js";
 
+// ── Generic query helpers ──
+
+/**
+ * Converts a sql.js exec() result set into an array of typed row objects.
+ */
+export function resultToRows<T>(
+  result: ReturnType<import("sql.js").Database["exec"]>,
+): T[] {
+  if (result.length === 0 || !result[0]) {
+    return [];
+  }
+  const { columns, values } = result[0];
+  return values.map((row) => {
+    const obj: Record<string, unknown> = {};
+    for (let i = 0; i < columns.length; i++) {
+      obj[columns[i] as string] = row[i];
+    }
+    return obj as T;
+  });
+}
+
+/**
+ * Converts a sql.js exec() result set into a single typed row, or undefined.
+ */
+export function resultToRow<T>(
+  result: ReturnType<import("sql.js").Database["exec"]>,
+): T | undefined {
+  const rows = resultToRows<T>(result);
+  return rows[0];
+}
+
 // ── Connection cache ──
 
 const connections = new Map<string, Database>();
@@ -42,7 +73,7 @@ const connections = new Map<string, Database>();
 /**
  * Resolves the path to the sql.js WASM binary.
  */
-function locateWasm(): string {
+export function locateWasm(): string {
   const require = createRequire(import.meta.url);
   const sqlJsPath = require.resolve("sql.js");
   // require.resolve returns .../sql.js/dist/sql-wasm.js, so dirname is already /dist/
@@ -52,10 +83,8 @@ function locateWasm(): string {
 /**
  * Applies required pragmas to every connection.
  */
-function applyPragmas(db: Database): void {
-  db.run("PRAGMA journal_mode = WAL;");
+export function applyPragmas(db: Database): void {
   db.run("PRAGMA foreign_keys = ON;");
-  db.run("PRAGMA busy_timeout = 5000;");
 }
 
 /**
@@ -93,7 +122,8 @@ export async function openDatabase(dbPath: string): Promise<Database> {
 }
 
 /**
- * Saves the in-memory database state to disk.
+ * Saves the in-memory database state to disk using atomic write
+ * (temp file + rename) to prevent partial reads by concurrent processes.
  */
 export function saveDatabase(db: Database, dbPath: string): void {
   const data = db.export();
@@ -101,7 +131,9 @@ export function saveDatabase(db: Database, dbPath: string): void {
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }
-  writeFileSync(dbPath, Buffer.from(data));
+  const tmpPath = dbPath + ".tmp";
+  writeFileSync(tmpPath, Buffer.from(data));
+  renameSync(tmpPath, dbPath);
 }
 
 /**

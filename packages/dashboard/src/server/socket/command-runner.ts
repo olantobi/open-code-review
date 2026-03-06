@@ -50,7 +50,7 @@ const AI_COMMANDS = new Set(['map', 'review', 'translate-review-to-single-human'
 const MAX_CONCURRENT = 3
 
 interface ProcessEntry {
-  process: ChildProcess
+  process: ChildProcess | null
   executionId: number
   outputBuffer: string
   commandStr: string
@@ -163,7 +163,7 @@ export function registerCommandHandlers(
 
       const isAi = AI_COMMANDS.has(baseCommand)
       const entry: ProcessEntry = {
-        process: null!,
+        process: null,
         executionId: executionId,
         outputBuffer: '',
         commandStr: command,
@@ -201,8 +201,8 @@ export function registerCommandHandlers(
   })
 
   // Allow cancelling a running command by execution_id.
-  // Kill the entire process group (sh + cat + claude pipeline) and
-  // escalate to SIGKILL if the process doesn't exit within 5 seconds.
+  // Kill the entire process group and escalate to SIGKILL if the process
+  // doesn't exit within 5 seconds.
   socket.on('command:cancel', (payload?: { execution_id?: number }) => {
     try {
       const targetId = payload?.execution_id
@@ -212,6 +212,7 @@ export function registerCommandHandlers(
       if (!entry) return
 
       const proc = entry.process
+      if (!proc) return  // Process not yet spawned
       const pid = proc.pid
 
       // Only use process group kill (-pid) for detached processes (AI commands).

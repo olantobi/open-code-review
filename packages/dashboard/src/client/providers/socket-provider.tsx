@@ -49,7 +49,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
         setStatus('connected')
         // Rejoin rooms after reconnection
         for (const room of joinedRooms.current) {
-          socket.emit('join', room)
+          socket.emit('join:session', room)
         }
       })
 
@@ -71,12 +71,12 @@ export function SocketProvider({ children }: { children: ReactNode }) {
 
   const joinRoom = useCallback((room: string) => {
     joinedRooms.current.add(room)
-    socketRef.current?.emit('join', room)
+    socketRef.current?.emit('join:session', room)
   }, [])
 
   const leaveRoom = useCallback((room: string) => {
     joinedRooms.current.delete(room)
-    socketRef.current?.emit('leave', room)
+    socketRef.current?.emit('leave:session', room)
   }, [])
 
   const value = useMemo<SocketContextValue>(

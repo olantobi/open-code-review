@@ -28,12 +28,12 @@ export function Sidebar() {
 
   useEffect(() => {
     if (config?.workspaceName) {
-      document.title = `${config.workspaceName} — OCR Dashboard`
-    }
-    return () => {
+      const branch = config.gitBranch ? ` (${config.gitBranch})` : ''
+      document.title = `${config.workspaceName}${branch} — OCR Dashboard`
+    } else {
       document.title = 'OCR Dashboard'
     }
-  }, [config?.workspaceName])
+  }, [config?.workspaceName, config?.gitBranch])
 
   return (
     <aside className="flex h-full w-56 flex-col border-r border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950">

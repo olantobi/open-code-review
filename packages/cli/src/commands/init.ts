@@ -16,7 +16,11 @@ import {
 import { injectIntoProjectFiles } from "../lib/injector.js";
 import { printBanner } from "../lib/banner.js";
 import { setConfiguredToolIds } from "../lib/cli-config.js";
-import { checkDependencies, printDepChecks } from "../lib/deps.js";
+import {
+  checkDependencies,
+  printDepChecks,
+  printCapabilities,
+} from "../lib/deps.js";
 
 export const initCommand = new Command("init")
   .description("Set up OCR for AI coding environments")
@@ -27,6 +31,7 @@ export const initCommand = new Command("init")
 
     const depResult = checkDependencies();
     printDepChecks(depResult);
+    printCapabilities(depResult);
     console.log();
 
     const targetDir = process.cwd();
@@ -159,12 +164,27 @@ export const initCommand = new Command("init")
     );
     console.log(
       chalk.dim(
-        "     Add project context, review rules, and customize discovery settings.",
+        "     Add project context, review rules, and customize settings.",
       ),
     );
     console.log();
     console.log(
-      `  ${chalk.cyan("2.")} Run ${chalk.yellow("/ocr-review")} to start a code review session.`,
+      `  ${chalk.cyan("2.")} Run ${chalk.yellow("/ocr:review")} in your IDE to start a code review.`,
     );
+    console.log();
+    console.log(
+      `  ${chalk.cyan("3.")} Run ${chalk.yellow("ocr dashboard")} to open the web dashboard.`,
+    );
+    if (depResult.capabilities.dashboardAi) {
+      console.log(
+        chalk.dim("     Command Center and Ask the Team are ready."),
+      );
+    } else {
+      console.log(
+        chalk.dim(
+          "     Read-only mode — install Claude Code or OpenCode for full features.",
+        ),
+      );
+    }
     console.log();
   });

@@ -4,7 +4,11 @@ import { Command } from "commander";
 import chalk from "chalk";
 import { printHeader } from "../lib/banner.js";
 import { checkOcrSetup } from "../lib/guards.js";
-import { checkDependencies, printDepChecks } from "../lib/deps.js";
+import {
+  checkDependencies,
+  printDepChecks,
+  printCapabilities,
+} from "../lib/deps.js";
 
 export const doctorCommand = new Command("doctor")
   .description("Check OCR installation and verify all dependencies")
@@ -61,6 +65,11 @@ export const doctorCommand = new Command("doctor")
       hasIssues = true;
     }
 
+    // ── Capabilities ──
+
+    console.log();
+    printCapabilities(depResult);
+
     // ── Summary ──
 
     console.log();
@@ -98,6 +107,21 @@ export const doctorCommand = new Command("doctor")
       process.exit(1);
     }
 
-    console.log(chalk.green("  ✓ Ready for code review!"));
+    const caps = depResult.capabilities;
+    if (caps.dashboardAi && caps.githubPost) {
+      console.log(chalk.green("  ✓ All features available"));
+    } else if (caps.dashboardAi) {
+      console.log(chalk.green("  ✓ Ready for code review"));
+      console.log(
+        chalk.dim("    Install gh for GitHub PR posting"),
+      );
+    } else {
+      console.log(chalk.green("  ✓ Ready for code review"));
+      console.log(
+        chalk.dim(
+          "    Install Claude Code or OpenCode for dashboard commands",
+        ),
+      );
+    }
     console.log();
   });

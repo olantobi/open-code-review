@@ -47,17 +47,21 @@ function buildPhases(
   status: string,
 ): Phase[] {
   const phaseNames = workflowType === 'map' ? MAP_PHASES : REVIEW_PHASES
+  const totalPhases = phaseNames.length
 
-  // `phaseNumber` = the phase that is currently active (1-indexed).
-  // Transitions are called BEFORE starting a phase, so:
-  //   phaseNumber=1 → Phase 1 is active, nothing is complete yet.
-  //   phaseNumber=3 → Phases 1-2 are complete, Phase 3 is active.
-  // When status is 'closed', all phases are complete.
-  const allComplete = status === 'closed'
+  // A session is "fully complete" only if it reached the final phase.
+  // If closed early (interrupted), show phases beyond progress as 'skipped'.
+  const fullyComplete = status === 'closed' && phaseNumber >= totalPhases
 
   return phaseNames.map((name, i) => {
     const label = phaseLabel(name)
-    if (allComplete) return { name: label, status: 'complete' }
+    if (fullyComplete) return { name: label, status: 'complete' }
+    if (status === 'closed') {
+      // Closed early — show actual progress, mark unreached phases as skipped
+      if (i + 1 <= phaseNumber) return { name: label, status: 'complete' }
+      return { name: label, status: 'skipped' }
+    }
+    // Active session
     if (i + 1 < phaseNumber) return { name: label, status: 'complete' }
     if (i + 1 === phaseNumber) return { name: label, status: 'active' }
     return { name: label, status: 'pending' }
@@ -99,13 +103,10 @@ export function SessionDetailPage() {
     )
   }
 
-  const WorkflowIcon = session.workflow_type === 'map' ? Map : FileSearch
-  const phases = buildPhases(
-    session.workflow_type,
-    session.current_phase,
-    session.phase_number,
-    session.status,
-  )
+  const hasBoth = session.has_review && session.has_map
+  const workflowLabel = hasBoth
+    ? 'Review + Map'
+    : session.has_map ? 'Map' : 'Review'
 
   return (
     <div className="space-y-6">
@@ -129,8 +130,9 @@ export function SessionDetailPage() {
             </div>
             <div className="flex items-center gap-3 text-sm text-zinc-500 dark:text-zinc-400">
               <span className="flex items-center gap-1">
-                <WorkflowIcon className="h-4 w-4" />
-                <span className="capitalize">{session.workflow_type}</span>
+                {session.has_review && <FileSearch className="h-4 w-4" />}
+                {session.has_map && <Map className="h-4 w-4" />}
+                <span>{workflowLabel}</span>
               </span>
               <span className="flex items-center gap-1">
                 <Clock className="h-4 w-4" />
@@ -145,7 +147,31 @@ export function SessionDetailPage() {
           <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
             Progress
           </h3>
-          <PhaseTimeline phases={phases} />
+          {hasBoth ? (
+            <div className="space-y-3">
+              <div>
+                <div className="mb-1 flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+                  <FileSearch className="h-3.5 w-3.5" />
+                  <span>Review</span>
+                </div>
+                <PhaseTimeline phases={buildPhases('review', session.review_phase, session.review_phase_number, session.status)} />
+              </div>
+              <div>
+                <div className="mb-1 flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+                  <Map className="h-3.5 w-3.5" />
+                  <span>Map</span>
+                </div>
+                <PhaseTimeline phases={buildPhases('map', session.map_phase, session.map_phase_number, session.status)} />
+              </div>
+            </div>
+          ) : (
+            <PhaseTimeline phases={buildPhases(
+              session.has_map ? 'map' : 'review',
+              session.has_map ? session.map_phase : session.review_phase,
+              session.has_map ? session.map_phase_number : session.review_phase_number,
+              session.status,
+            )} />
+          )}
         </div>
       </div>
 

@@ -9,7 +9,19 @@ interface SessionCardProps {
 }
 
 export function SessionCard({ session }: SessionCardProps) {
-  const WorkflowIcon = session.workflow_type === 'map' ? Map : FileSearch
+  const hasBoth = session.has_review && session.has_map
+  const workflowLabel = hasBoth
+    ? 'Review + Map'
+    : session.has_map ? 'Map' : 'Review'
+
+  // Show the primary workflow's phase in the card
+  const displayPhase = session.has_review
+    ? session.review_phase
+    : session.map_phase
+  const phaseLabel = displayPhase
+    .split('-')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ')
 
   return (
     <Link
@@ -28,11 +40,12 @@ export function SessionCard({ session }: SessionCardProps) {
 
       <div className="mt-3 flex items-center gap-3 text-xs text-zinc-500 dark:text-zinc-400">
         <span className="flex items-center gap-1">
-          <WorkflowIcon className="h-3.5 w-3.5" />
-          <span className="capitalize">{session.workflow_type}</span>
+          {session.has_review && <FileSearch className="h-3.5 w-3.5" />}
+          {session.has_map && <Map className="h-3.5 w-3.5" />}
+          <span>{workflowLabel}</span>
         </span>
         <span className="text-zinc-300 dark:text-zinc-700">|</span>
-        <span>Phase: {session.current_phase.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</span>
+        <span>Phase: {phaseLabel}</span>
       </div>
 
       <div className="mt-2 flex items-center gap-3 text-xs text-zinc-400 dark:text-zinc-500">

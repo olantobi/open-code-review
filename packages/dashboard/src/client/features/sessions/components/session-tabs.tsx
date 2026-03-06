@@ -5,7 +5,7 @@ import { FileSearch, Map, Loader2 } from 'lucide-react'
 import { cn, fetchApi } from '../../../lib/utils'
 import { useSocketEvent } from '../../../providers/socket-provider'
 import { StatusBadge } from '../../../components/ui/status-badge'
-import type { SessionSummary, ReviewRound, MapRun } from '../../../lib/api-types'
+import type { SessionSummary, ReviewRound, MapRun, SessionStatus } from '../../../lib/api-types'
 
 interface SessionTabsProps {
   session: SessionSummary
@@ -14,8 +14,8 @@ interface SessionTabsProps {
 type Tab = 'review' | 'map'
 
 export function SessionTabs({ session }: SessionTabsProps) {
-  const hasReview = session.workflow_type === 'review' || session.current_round > 0
-  const hasMap = session.workflow_type === 'map' || session.current_map_run > 0
+  const hasReview = session.has_review
+  const hasMap = session.has_map
 
   const defaultTab: Tab = hasReview ? 'review' : 'map'
   const [activeTab, setActiveTab] = useState<Tab>(defaultTab)
@@ -57,17 +57,17 @@ export function SessionTabs({ session }: SessionTabsProps) {
 
       <div className="mt-4">
         {activeTab === 'review' && (
-          <ReviewTabContent sessionId={session.id} />
+          <ReviewTabContent sessionId={session.id} status={session.status} />
         )}
         {activeTab === 'map' && (
-          <MapTabContent sessionId={session.id} />
+          <MapTabContent sessionId={session.id} status={session.status} />
         )}
       </div>
     </div>
   )
 }
 
-function ReviewTabContent({ sessionId }: { sessionId: string }) {
+function ReviewTabContent({ sessionId, status }: { sessionId: string; status: SessionStatus }) {
   const queryClient = useQueryClient()
 
   // Refresh when artifacts are created/updated (reviewer outputs, final.md)
@@ -96,7 +96,9 @@ function ReviewTabContent({ sessionId }: { sessionId: string }) {
   if (!rounds || rounds.length === 0) {
     return (
       <p className="text-sm text-zinc-500 dark:text-zinc-400">
-        Review in progress — no completed rounds yet.
+        {status === 'closed'
+          ? 'This session was closed without completing any review rounds.'
+          : 'Review in progress — no completed rounds yet.'}
       </p>
     )
   }
@@ -125,7 +127,7 @@ function ReviewTabContent({ sessionId }: { sessionId: string }) {
   )
 }
 
-function MapTabContent({ sessionId }: { sessionId: string }) {
+function MapTabContent({ sessionId, status }: { sessionId: string; status: SessionStatus }) {
   const queryClient = useQueryClient()
 
   // Refresh when map artifacts are created/updated
@@ -154,7 +156,9 @@ function MapTabContent({ sessionId }: { sessionId: string }) {
   if (!runs || runs.length === 0) {
     return (
       <p className="text-sm text-zinc-500 dark:text-zinc-400">
-        Map in progress — no completed runs yet.
+        {status === 'closed'
+          ? 'This session was closed without completing any map runs.'
+          : 'Map in progress — no completed runs yet.'}
       </p>
     )
   }

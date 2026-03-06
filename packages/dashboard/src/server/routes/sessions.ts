@@ -18,6 +18,7 @@ import {
   getMapRunsForSession,
   getArtifact,
   getReviewerOutputsForRound,
+  getRoundProgress,
 } from '../db.js'
 
 // Phase names must match session-detail-page.tsx constants
@@ -50,6 +51,9 @@ interface EnrichedSession extends SessionRow {
   review_phase: string
   map_phase_number: number
   map_phase: string
+  latest_verdict: string | null
+  latest_blocker_count: number
+  latest_round_status: string | null
 }
 
 /**
@@ -136,6 +140,13 @@ function enrichSession(db: Database, session: SessionRow): EnrichedSession {
     }
   }
 
+  // Latest review verdict from the most recent completed round
+  const latestRound = rounds.length > 0 ? rounds[rounds.length - 1]! : null
+  const latestVerdict = latestRound?.verdict ?? null
+  const latestBlockerCount = latestRound?.blocker_count ?? 0
+  const latestRoundProgress = latestRound ? getRoundProgress(db, latestRound.id) : undefined
+  const latestRoundStatus = latestRoundProgress?.status ?? null
+
   return {
     ...session,
     has_review: hasReview,
@@ -144,6 +155,9 @@ function enrichSession(db: Database, session: SessionRow): EnrichedSession {
     review_phase: reviewPhase,
     map_phase_number: mapPhaseNumber,
     map_phase: mapPhase,
+    latest_verdict: latestVerdict,
+    latest_blocker_count: latestBlockerCount,
+    latest_round_status: latestRoundStatus,
   }
 }
 

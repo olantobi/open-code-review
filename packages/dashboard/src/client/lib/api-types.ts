@@ -20,6 +20,9 @@ export interface SessionSummary {
   review_phase: string
   map_phase_number: number
   map_phase: string
+  latest_verdict: string | null
+  latest_blocker_count: number
+  latest_round_status: string | null
 }
 
 export interface OrchestrationEvent {

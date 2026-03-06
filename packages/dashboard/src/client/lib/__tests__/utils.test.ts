@@ -1,5 +1,49 @@
 import { describe, it, expect } from 'vitest'
-import { parseUtcDate, buildIdeLink } from '../utils'
+import { cn, parseUtcDate, buildIdeLink } from '../utils'
+
+// ── cn ───────────────────────────────────────────────────────────────────────
+
+describe('cn', () => {
+  it('returns a single class name unchanged', () => {
+    expect(cn('text-sm')).toBe('text-sm')
+  })
+
+  it('merges multiple class names', () => {
+    const result = cn('text-sm', 'font-bold')
+    expect(result).toContain('text-sm')
+    expect(result).toContain('font-bold')
+  })
+
+  it('handles conditional classes via clsx-style objects', () => {
+    const result = cn('base', { active: true, hidden: false })
+    expect(result).toContain('base')
+    expect(result).toContain('active')
+    expect(result).not.toContain('hidden')
+  })
+
+  it('resolves tailwind conflicts by keeping the last class', () => {
+    // tailwind-merge should resolve px-2 vs px-4 to the last one
+    const result = cn('px-2', 'px-4')
+    expect(result).toContain('px-4')
+    expect(result).not.toContain('px-2')
+  })
+
+  it('returns an empty string when given no arguments', () => {
+    expect(cn()).toBe('')
+  })
+
+  it('filters out falsy values', () => {
+    const result = cn('text-sm', undefined, null, false, '', 'font-bold')
+    expect(result).toContain('text-sm')
+    expect(result).toContain('font-bold')
+  })
+
+  it('handles array inputs', () => {
+    const result = cn(['text-sm', 'font-bold'])
+    expect(result).toContain('text-sm')
+    expect(result).toContain('font-bold')
+  })
+})
 
 // ── parseUtcDate ──────────────────────────────────────────────────────────────
 

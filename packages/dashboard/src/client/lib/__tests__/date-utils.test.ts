@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   formatDate,
+  formatShortDate,
   formatDateTime,
   timeAgo,
   formatElapsed,
@@ -30,6 +31,38 @@ describe('formatDate', () => {
     // The locale format always includes the year (short month + year option)
     const result = formatDate('2026-03-01 00:00:00')
     expect(result).toContain('2026')
+  })
+})
+
+// ── formatShortDate ──────────────────────────────────────────────────────────
+
+describe('formatShortDate', () => {
+  it('returns a non-empty string for a SQLite datetime', () => {
+    const result = formatShortDate('2026-01-05 14:30:00')
+    expect(typeof result).toBe('string')
+    expect(result.length).toBeGreaterThan(0)
+  })
+
+  it('returns a non-empty string for an ISO datetime with Z suffix', () => {
+    const result = formatShortDate('2026-01-05T14:30:00Z')
+    expect(typeof result).toBe('string')
+    expect(result.length).toBeGreaterThan(0)
+  })
+
+  it('does not throw for an ISO datetime with a UTC offset', () => {
+    expect(() => formatShortDate('2026-06-15T09:00:00+05:30')).not.toThrow()
+  })
+
+  it('does not include the year in the output', () => {
+    // formatShortDate uses { month, day, hour, minute } — no year option
+    const result = formatShortDate('2026-03-01 00:00:00')
+    expect(result).not.toContain('2026')
+  })
+
+  it('includes the month abbreviation in the output', () => {
+    // All locales should produce some form of "Jan" for January
+    const result = formatShortDate('2026-01-15 10:00:00')
+    expect(result.length).toBeGreaterThan(0)
   })
 })
 

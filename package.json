@@ -24,6 +24,8 @@
   "devDependencies": {
     "@nx/esbuild": "^22.0.0",
     "@nx/js": "^22.0.0",
+    "@swc-node/register": "^1.11.1",
+    "@swc/core": "^1.15.18",
     "@types/node": "^22.10.5",
     "esbuild": "^0.24.0",
     "nx": "^22.0.0",

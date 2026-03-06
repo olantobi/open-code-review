@@ -36,6 +36,16 @@ export default function MermaidRenderer({ definition, onNodeClick }: MermaidRend
 
     let cancelled = false
 
+    // Event delegation handler for node clicks — added once to the container
+    // so it is automatically cleaned up without tracking per-node listeners.
+    function handleContainerClick(e: MouseEvent) {
+      if (!onNodeClick) return
+      const target = (e.target as HTMLElement).closest('.node') as HTMLElement | null
+      if (!target) return
+      const nodeId = target.id?.replace(/^flowchart-/, '').replace(/-\d+$/, '') ?? ''
+      if (nodeId) onNodeClick(nodeId)
+    }
+
     async function render() {
       setError(null)
 
@@ -49,16 +59,11 @@ export default function MermaidRenderer({ definition, onNodeClick }: MermaidRend
 
         containerRef.current.innerHTML = svg
 
-        // Attach click handlers to nodes
+        // Style clickable nodes for UX
         if (onNodeClick) {
           const nodes = containerRef.current.querySelectorAll('.node')
           nodes.forEach((node) => {
-            const nodeElement = node as HTMLElement
-            nodeElement.style.cursor = 'pointer'
-            nodeElement.addEventListener('click', () => {
-              const nodeId = nodeElement.id?.replace(/^flowchart-/, '').replace(/-\d+$/, '') ?? ''
-              if (nodeId) onNodeClick(nodeId)
-            })
+            ;(node as HTMLElement).style.cursor = 'pointer'
           })
         }
       } catch (err) {
@@ -68,8 +73,16 @@ export default function MermaidRenderer({ definition, onNodeClick }: MermaidRend
       }
     }
 
+    const container = containerRef.current
+    if (onNodeClick) {
+      container.addEventListener('click', handleContainerClick)
+    }
+
     render()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+      container.removeEventListener('click', handleContainerClick)
+    }
   }, [definition, theme, uniqueId, onNodeClick])
 
   if (error) {

@@ -4,6 +4,8 @@
 
 import type { Server as SocketIOServer, Socket } from 'socket.io'
 
+const SESSION_ID_PATTERN = /^\d{4}-\d{2}-\d{2}-.+$/
+
 /**
  * Registers socket event handlers for a connected client.
  */
@@ -14,7 +16,6 @@ export function registerSocketHandlers(io: SocketIOServer, socket: Socket): void
         socket.emit('error', { message: 'Invalid payload: sessionId must be a string' })
         return
       }
-      const SESSION_ID_PATTERN = /^\d{4}-\d{2}-\d{2}-.+$/
       if (!SESSION_ID_PATTERN.test(sessionId)) {
         socket.emit('error', { message: 'Invalid sessionId format' })
         return
@@ -33,7 +34,6 @@ export function registerSocketHandlers(io: SocketIOServer, socket: Socket): void
         socket.emit('error', { message: 'Invalid payload: sessionId must be a string' })
         return
       }
-      const SESSION_ID_PATTERN = /^\d{4}-\d{2}-\d{2}-.+$/
       if (!SESSION_ID_PATTERN.test(sessionId)) {
         socket.emit('error', { message: 'Invalid sessionId format' })
         return

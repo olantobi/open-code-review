@@ -427,6 +427,15 @@ export function registerPostHandlers(
           return
         }
 
+        const MAX_CONTENT_SIZE = 1_000_000 // 1 MB
+        if (content.length > MAX_CONTENT_SIZE) {
+          socket.emit('post:save-result', {
+            success: false,
+            error: `Content too large (${content.length} chars, max ${MAX_CONTENT_SIZE})`,
+          })
+          return
+        }
+
         const session = getSession(db, sessionId)
         if (!session) {
           socket.emit('post:save-result', { success: false, error: 'Session not found' })

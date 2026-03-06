@@ -32,6 +32,7 @@ import { DbSyncWatcher } from './services/db-sync-watcher.js'
 import { registerCommandHandlers } from './socket/command-runner.js'
 import { registerChatHandlers, cleanupAllChats } from './socket/chat-handler.js'
 import { registerPostHandlers, cleanupAllPostGenerations } from './socket/post-handler.js'
+import { flushSave } from './routes/progress.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -48,6 +49,7 @@ const io = new SocketIOServer(httpServer, {
       ? ['http://localhost:5173', 'http://localhost:4173']
       : false,
   },
+  maxHttpBufferSize: 1e6, // 1 MB — explicit default; review if large payloads are needed
 })
 
 // ── Middleware ──
@@ -426,6 +428,9 @@ export async function startServer(options: StartServerOptions = {}): Promise<voi
 
     cleanupAllChats()
     cleanupAllPostGenerations()
+
+    // Flush any pending debounced progress writes (500ms window)
+    try { flushSave() } catch { /* ignore */ }
 
     // Flush all pending changes before stopping watchers
     try { saveDb(db, ocrDir) } catch { /* DB may not be writable during shutdown */ }

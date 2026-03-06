@@ -1,8 +1,10 @@
+import { useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Home, GitBranch, FileSearch, Terminal } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { useSocket } from '../../providers/socket-provider'
 import { useCommandState } from '../../providers/command-state-provider'
+import { useIdeConfig } from '../../hooks/use-ide-config'
 
 const NAV_ITEMS = [
   { to: '/', label: 'Home', icon: Home },
@@ -22,14 +24,56 @@ export function Sidebar() {
   const location = useLocation()
   const { status } = useSocket()
   const { runningCount } = useCommandState()
+  const { data: config } = useIdeConfig()
+
+  useEffect(() => {
+    if (config?.workspaceName) {
+      document.title = `${config.workspaceName} — OCR Dashboard`
+    }
+    return () => {
+      document.title = 'OCR Dashboard'
+    }
+  }, [config?.workspaceName])
 
   return (
     <aside className="flex h-full w-56 flex-col border-r border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950">
-      <div className="flex h-14 items-center gap-2 border-b border-zinc-200 px-4 dark:border-zinc-800">
-        <FileSearch className="h-5 w-5 text-zinc-700 dark:text-zinc-300" />
-        <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-          OCR Dashboard
-        </span>
+      <div className="group/brand relative flex h-14 items-center gap-2 border-b border-zinc-200 px-4 dark:border-zinc-800">
+        <FileSearch className="h-5 w-5 shrink-0 text-zinc-700 dark:text-zinc-300" />
+        <div className="min-w-0 flex-1">
+          <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+            OCR Dashboard
+          </span>
+          {config?.workspaceName && (
+            <span className="block truncate text-[11px] text-zinc-500 dark:text-zinc-400">
+              {config.workspaceName}
+              {config.gitBranch && (
+                <span className="ml-1 text-zinc-400 dark:text-zinc-500">
+                  ({config.gitBranch})
+                </span>
+              )}
+            </span>
+          )}
+        </div>
+
+        {/* Hover tooltip with full workspace details */}
+        {config?.workspaceName && (
+          <div className="pointer-events-none absolute left-full top-2 z-50 ml-2 min-w-[280px] max-w-sm opacity-0 transition-opacity delay-300 group-hover/brand:opacity-100">
+            {/* Arrow */}
+            <div className="absolute -left-1 top-3 h-2 w-2 rotate-45 bg-zinc-900 dark:bg-zinc-700" />
+            {/* Content */}
+            <div className="relative rounded-lg bg-zinc-900 px-3 py-2 text-xs shadow-lg dark:bg-zinc-700">
+              <div className="font-medium text-white">{config.workspaceName}</div>
+              {config.gitBranch && (
+                <div className="mt-0.5 font-mono text-emerald-400">
+                  {config.gitBranch}
+                </div>
+              )}
+              <div className="mt-1.5 break-words border-t border-zinc-700 pt-1.5 font-mono text-[10px] text-zinc-400 dark:border-zinc-600">
+                {config.projectRoot}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <nav className="flex-1 space-y-1 p-2">

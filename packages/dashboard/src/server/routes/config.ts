@@ -4,7 +4,8 @@
 
 import { Router } from 'express'
 import { readFileSync, writeFileSync } from 'node:fs'
-import { join, dirname } from 'node:path'
+import { execFileSync } from 'node:child_process'
+import { join, dirname, basename } from 'node:path'
 
 const VALID_IDES = ['vscode', 'cursor', 'windsurf', 'jetbrains', 'sublime'] as const
 type IdeType = (typeof VALID_IDES)[number]
@@ -55,14 +56,30 @@ function resolveIde(ocrDir: string): IdeType {
   return detectIde()
 }
 
+function detectGitBranch(cwd: string): string | null {
+  try {
+    return execFileSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
+      cwd,
+      timeout: 3000,
+      encoding: 'utf-8',
+    }).trim() || null
+  } catch {
+    return null
+  }
+}
+
 export function createConfigRouter(ocrDir: string): Router {
   const router = Router()
   const projectRoot = dirname(ocrDir)
+  const workspaceName = basename(projectRoot)
+  const gitBranch = detectGitBranch(projectRoot)
 
   router.get('/', (_req, res) => {
     res.json({
       projectRoot,
       ide: resolveIde(ocrDir),
+      workspaceName,
+      gitBranch,
     })
   })
 

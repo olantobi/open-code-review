@@ -5,6 +5,8 @@ import type { IdeType } from '../lib/utils'
 interface IdeConfig {
   projectRoot: string
   ide: IdeType
+  workspaceName: string
+  gitBranch: string | null
 }
 
 export function useIdeConfig() {

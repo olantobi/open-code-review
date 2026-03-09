@@ -67,7 +67,7 @@ export function AddressFeedbackPopover({ sessionId, roundNumber }: AddressFeedba
             aria-modal="true"
             aria-labelledby="address-feedback-title"
             tabIndex={-1}
-            className="relative z-10 w-full max-w-md rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-800 dark:bg-zinc-900"
+            className="relative z-10 mx-4 w-full max-w-md rounded-lg border border-zinc-200 bg-white shadow-lg sm:max-w-lg dark:border-zinc-800 dark:bg-zinc-900"
           >
             <button
               onClick={close}
@@ -106,6 +106,7 @@ function RunModeContent({
 }) {
   const [notes, setNotes] = useState('')
   const [confirming, setConfirming] = useState(false)
+  const [copied, setCopied] = useState(false)
   const { socket } = useSocket()
   const { isRunning } = useCommandState()
   const navigate = useNavigate()
@@ -118,11 +119,25 @@ function RunModeContent({
     return parts.join(' ')
   }
 
+  function buildSlashCommand(): string {
+    const parts = ['/ocr:address', finalPath]
+    if (notes.trim()) {
+      parts.push('\n\nNOTES:', notes.trim())
+    }
+    return parts.join(' ')
+  }
+
   function handleRun() {
     const command = buildCommandString()
     socket?.emit('command:run', { command })
     onClose()
     navigate('/commands')
+  }
+
+  async function handleCopy() {
+    await navigator.clipboard.writeText(buildSlashCommand())
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   return (
@@ -132,7 +147,7 @@ function RunModeContent({
           Address Feedback
         </h3>
         <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-          Spawn an AI agent to corroborate, validate, and implement changes from this review.
+          Run an AI agent to corroborate, validate, and implement changes from this review — in the dashboard or your own terminal.
         </p>
       </div>
 
@@ -174,40 +189,59 @@ function RunModeContent({
         </div>
 
         {/* Command preview */}
-        <code className="block w-full truncate rounded-md bg-zinc-100 px-2.5 py-1.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-          {buildCommandString()}
+        <code className="block w-full whitespace-pre-wrap break-all rounded-md bg-zinc-100 px-2.5 py-1.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+          {buildSlashCommand()}
         </code>
 
         {/* Actions */}
-        <div className="flex justify-end gap-3 pt-2">
+        <div className="space-y-2 pt-2">
+          <div className="flex flex-col gap-2 sm:flex-row-reverse">
+            {!confirming ? (
+              <button
+                onClick={() => setConfirming(true)}
+                disabled={isRunning}
+                className={cn(
+                  'flex flex-1 items-center justify-center gap-2 rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700',
+                  isRunning && 'cursor-not-allowed opacity-50',
+                )}
+              >
+                <Play className="h-3.5 w-3.5" />
+                Run in Dashboard
+              </button>
+            ) : (
+              <button
+                onClick={handleRun}
+                className="flex flex-1 items-center justify-center gap-2 rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700"
+              >
+                <Play className="h-3.5 w-3.5" />
+                Confirm
+              </button>
+            )}
+
+            <button
+              onClick={handleCopy}
+              className="flex flex-1 items-center justify-center gap-2 rounded-md border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            >
+              {copied ? (
+                <>
+                  <Check className="h-3.5 w-3.5" />
+                  Copied!
+                </>
+              ) : (
+                <>
+                  <ClipboardCopy className="h-3.5 w-3.5" />
+                  Copy to Terminal
+                </>
+              )}
+            </button>
+          </div>
+
           <button
             onClick={onClose}
-            className="rounded-md border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            className="w-full py-1 text-sm text-zinc-500 transition-colors hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
           >
             Cancel
           </button>
-
-          {!confirming ? (
-            <button
-              onClick={() => setConfirming(true)}
-              disabled={isRunning}
-              className={cn(
-                'inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-indigo-700',
-                isRunning && 'cursor-not-allowed opacity-50',
-              )}
-            >
-              <Play className="h-3.5 w-3.5" />
-              Run
-            </button>
-          ) : (
-            <button
-              onClick={handleRun}
-              className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-indigo-700"
-            >
-              <Play className="h-3.5 w-3.5" />
-              Confirm
-            </button>
-          )}
         </div>
       </div>
     </div>

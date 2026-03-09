@@ -5,7 +5,14 @@
  */
 
 import type { Database } from "sql.js";
-import { existsSync, readdirSync, statSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import {
   ensureDatabase,
   saveDatabase,
@@ -23,6 +30,13 @@ import type {
   TransitionParams,
   CloseParams,
   ShowResult,
+  RoundCompleteParams,
+  RoundCompleteResult,
+  RoundMeta,
+  RoundMetaFinding,
+  MapCompleteParams,
+  MapCompleteResult,
+  MapMeta,
 } from "./types.js";
 
 export type {
@@ -30,10 +44,22 @@ export type {
   TransitionParams,
   CloseParams,
   ShowResult,
+  RoundCompleteParams,
+  RoundCompleteResult,
+  RoundMeta,
+  RoundMetaFinding,
+  FindingCategory,
+  FindingSeverity,
   WorkflowType,
   SessionStatus,
   ReviewPhase,
   MapPhase,
+  MapCompleteParams,
+  MapCompleteResult,
+  MapMeta,
+  MapMetaSection,
+  MapMetaFile,
+  MapMetaDependency,
 } from "./types.js";
 
 /**
@@ -284,6 +310,370 @@ export async function resolveActiveSession(
     id: session.id,
     sessionDir: session.session_dir,
   };
+}
+
+// ── Shared completion helpers ──
+
+/**
+ * Read raw JSON string from either a file path or a raw data string.
+ */
+function readJsonFromSource(
+  params: { source: "file"; filePath: string } | { source: "stdin"; data: string },
+): string {
+  if (params.source === "file") {
+    if (!existsSync(params.filePath)) {
+      throw new Error(`File not found: ${params.filePath}`);
+    }
+    return readFileSync(params.filePath, "utf-8");
+  }
+  return params.data;
+}
+
+/**
+ * Parse a raw JSON string, throwing a descriptive error on failure.
+ */
+function parseRawJson(raw: string, label: string): unknown {
+  try {
+    return JSON.parse(raw);
+  } catch (err) {
+    throw new Error(
+      `Failed to parse ${label}: ${err instanceof Error ? err.message : "invalid JSON"}`,
+    );
+  }
+}
+
+/**
+ * Resolve the active session for a completion command.
+ * Uses explicit ID if provided, otherwise falls back to the latest active session.
+ */
+function resolveSessionForCompletion(
+  db: Database,
+  explicitId?: string,
+): { id: string; session_dir: string; current_round: number; current_map_run: number } {
+  if (explicitId) {
+    const existing = getSession(db, explicitId);
+    if (!existing) throw new Error(`Session not found: ${explicitId}`);
+    return {
+      id: existing.id,
+      session_dir: existing.session_dir,
+      current_round: existing.current_round,
+      current_map_run: existing.current_map_run,
+    };
+  }
+  const active = getLatestActiveSession(db);
+  if (!active) throw new Error("No active session found");
+  return {
+    id: active.id,
+    session_dir: active.session_dir,
+    current_round: active.current_round,
+    current_map_run: active.current_map_run,
+  };
+}
+
+// ── Round-meta validation helpers ──
+
+const VALID_CATEGORIES = new Set(["blocker", "should_fix", "suggestion", "style"]);
+const VALID_SEVERITIES = new Set(["critical", "high", "medium", "low", "info"]);
+
+function validateRoundMeta(meta: unknown): RoundMeta {
+  if (!meta || typeof meta !== "object") {
+    throw new Error("round-meta.json must be a JSON object");
+  }
+
+  const obj = meta as Record<string, unknown>;
+
+  if (obj.schema_version !== 1) {
+    throw new Error(
+      `Unsupported schema_version: ${String(obj.schema_version)}. Expected 1.`,
+    );
+  }
+
+  if (typeof obj.verdict !== "string" || obj.verdict.trim().length === 0) {
+    throw new Error("round-meta.json must contain a non-empty verdict string");
+  }
+
+  if (!Array.isArray(obj.reviewers)) {
+    throw new Error("round-meta.json must contain a reviewers array");
+  }
+
+  for (const reviewer of obj.reviewers) {
+    if (!reviewer || typeof reviewer !== "object") {
+      throw new Error("Each reviewer must be an object");
+    }
+    const r = reviewer as Record<string, unknown>;
+    if (typeof r.type !== "string") {
+      throw new Error("Each reviewer must have a type string");
+    }
+    if (typeof r.instance !== "number") {
+      throw new Error("Each reviewer must have an instance number");
+    }
+    if (!Array.isArray(r.findings)) {
+      throw new Error(`Reviewer ${r.type}-${r.instance} must have a findings array`);
+    }
+    for (const finding of r.findings) {
+      if (!finding || typeof finding !== "object") {
+        throw new Error("Each finding must be an object");
+      }
+      const f = finding as Record<string, unknown>;
+      if (typeof f.title !== "string" || f.title.trim().length === 0) {
+        throw new Error("Each finding must have a non-empty title");
+      }
+      if (typeof f.category !== 'string' || !VALID_CATEGORIES.has(f.category)) {
+        throw new Error(
+          `Finding "${f.title}" has invalid category: "${String(f.category)}". Must be one of: ${[...VALID_CATEGORIES].join(", ")}`,
+        );
+      }
+      if (typeof f.severity !== 'string' || !VALID_SEVERITIES.has(f.severity)) {
+        throw new Error(
+          `Finding "${f.title}" has invalid severity: "${String(f.severity)}". Must be one of: ${[...VALID_SEVERITIES].join(", ")}`,
+        );
+      }
+      if (typeof f.summary !== "string") {
+        throw new Error(`Finding "${f.title}" must have a summary string`);
+      }
+      if (f.file_path !== undefined && typeof f.file_path !== "string") {
+        throw new Error(`Finding "${f.title}" has invalid file_path: expected string`);
+      }
+      if (f.line_start !== undefined && typeof f.line_start !== "number") {
+        throw new Error(`Finding "${f.title}" has invalid line_start: expected number`);
+      }
+      if (f.line_end !== undefined && typeof f.line_end !== "number") {
+        throw new Error(`Finding "${f.title}" has invalid line_end: expected number`);
+      }
+      if (f.flagged_by !== undefined && !Array.isArray(f.flagged_by)) {
+        throw new Error(`Finding "${f.title}" has invalid flagged_by: expected array`);
+      }
+    }
+  }
+
+  return meta as RoundMeta;
+}
+
+/**
+ * Compute derived counts from the findings array in a RoundMeta.
+ * Counts are NEVER self-reported — always derived from the data.
+ *
+ * Note: `style` findings are intentionally included only in `totalFindingCount`
+ * and do not have a separate named counter. The dashboard displays them as part
+ * of the total but does not break them out in summary cards.
+ */
+export function computeRoundCounts(meta: RoundMeta): {
+  blockerCount: number;
+  shouldFixCount: number;
+  suggestionCount: number;
+  reviewerCount: number;
+  totalFindingCount: number;
+} {
+  const allFindings: RoundMetaFinding[] = [];
+  for (const reviewer of meta.reviewers) {
+    allFindings.push(...reviewer.findings);
+  }
+
+  return {
+    blockerCount: allFindings.filter((f) => f.category === "blocker").length,
+    shouldFixCount: allFindings.filter((f) => f.category === "should_fix").length,
+    suggestionCount: allFindings.filter((f) => f.category === "suggestion").length,
+    reviewerCount: meta.reviewers.length,
+    totalFindingCount: allFindings.length,
+  };
+}
+
+/**
+ * Import structured review round data into SQLite.
+ *
+ * Accepts data from either a file path (`source: "file"`) or a raw JSON
+ * string (`source: "stdin"`). Validates the schema, computes derived counts,
+ * and writes a `round_completed` orchestration event.
+ *
+ * When `source` is `"stdin"`, the CLI also writes `round-meta.json` to the
+ * correct session round directory — making the CLI the sole writer of all
+ * stateful artifacts.
+ */
+export async function stateRoundComplete(
+  params: RoundCompleteParams,
+): Promise<RoundCompleteResult> {
+  const { ocrDir } = params;
+  const db = await ensureDatabase(ocrDir);
+  const dbPath = join(ocrDir, "data", "ocr.db");
+
+  // ── 1. Read and parse JSON ──
+  const rawJsonString = readJsonFromSource(params);
+  const label = params.source === "file" ? params.filePath : "stdin";
+  const raw = parseRawJson(rawJsonString, label);
+
+  // ── 2. Validate and compute counts ──
+  const meta = validateRoundMeta(raw);
+  const counts = computeRoundCounts(meta);
+
+  // ── 3. Resolve session and round ──
+  const session = resolveSessionForCompletion(db, params.sessionId);
+  const roundNumber = params.round ?? session.current_round;
+
+  // ── 4. Write round-meta.json when source is stdin ──
+  let metaPath: string | undefined;
+  if (params.source === "stdin") {
+    const roundDir = join(session.session_dir, "rounds", `round-${roundNumber}`);
+    mkdirSync(roundDir, { recursive: true });
+    metaPath = join(roundDir, "round-meta.json");
+    writeFileSync(metaPath, JSON.stringify(meta, null, 2));
+  }
+
+  // ── 5. Write orchestration event with all data in metadata ──
+  insertEvent(db, {
+    session_id: session.id,
+    event_type: "round_completed",
+    phase: "synthesis",
+    phase_number: 7,
+    round: roundNumber,
+    metadata: JSON.stringify({
+      verdict: meta.verdict,
+      blocker_count: counts.blockerCount,
+      should_fix_count: counts.shouldFixCount,
+      suggestion_count: counts.suggestionCount,
+      reviewer_count: counts.reviewerCount,
+      total_finding_count: counts.totalFindingCount,
+      source: "orchestrator",
+    }),
+  });
+
+  saveDatabase(db, dbPath);
+
+  return { sessionId: session.id, round: roundNumber, metaPath };
+}
+
+// ── Map-meta validation helpers ──
+
+function validateMapMeta(meta: unknown): MapMeta {
+  if (!meta || typeof meta !== "object") {
+    throw new Error("map-meta.json must be a JSON object");
+  }
+
+  const obj = meta as Record<string, unknown>;
+
+  if (obj.schema_version !== 1) {
+    throw new Error(
+      `Unsupported schema_version: ${String(obj.schema_version)}. Expected 1.`,
+    );
+  }
+
+  if (!Array.isArray(obj.sections)) {
+    throw new Error("map-meta.json must contain a sections array");
+  }
+
+  for (const section of obj.sections) {
+    if (!section || typeof section !== "object") {
+      throw new Error("Each section must be an object");
+    }
+    const s = section as Record<string, unknown>;
+    if (typeof s.section_number !== "number") {
+      throw new Error("Each section must have a section_number");
+    }
+    if (typeof s.title !== "string" || s.title.trim().length === 0) {
+      throw new Error("Each section must have a non-empty title");
+    }
+    if (!Array.isArray(s.files)) {
+      throw new Error(`Section "${s.title}" must have a files array`);
+    }
+    for (const file of s.files) {
+      if (!file || typeof file !== "object") {
+        throw new Error("Each file must be an object");
+      }
+      const f = file as Record<string, unknown>;
+      if (typeof f.file_path !== "string" || f.file_path.trim().length === 0) {
+        throw new Error("Each file must have a non-empty file_path");
+      }
+      if (typeof f.role !== "string") {
+        throw new Error(`File "${f.file_path}" must have a role string`);
+      }
+      if (typeof f.lines_added !== "number") {
+        throw new Error(`File "${f.file_path}" must have a lines_added number`);
+      }
+      if (typeof f.lines_deleted !== "number") {
+        throw new Error(`File "${f.file_path}" must have a lines_deleted number`);
+      }
+    }
+  }
+
+  if (obj.dependencies !== undefined && !Array.isArray(obj.dependencies)) {
+    throw new Error("map-meta.json dependencies must be an array if provided");
+  }
+
+  return meta as MapMeta;
+}
+
+/**
+ * Compute derived counts from the sections array in a MapMeta.
+ * Counts are NEVER self-reported — always derived from the data.
+ */
+export function computeMapCounts(meta: MapMeta): {
+  sectionCount: number;
+  fileCount: number;
+} {
+  return {
+    sectionCount: meta.sections.length,
+    fileCount: meta.sections.reduce((sum, s) => sum + s.files.length, 0),
+  };
+}
+
+/**
+ * Import structured map run data into SQLite.
+ *
+ * Accepts data from either a file path (`source: "file"`) or a raw JSON
+ * string (`source: "stdin"`). Validates the schema, computes derived counts,
+ * and writes a `map_completed` orchestration event.
+ *
+ * When `source` is `"stdin"`, the CLI also writes `map-meta.json` to the
+ * correct session map run directory — making the CLI the sole writer of all
+ * stateful artifacts.
+ */
+export async function stateMapComplete(
+  params: MapCompleteParams,
+): Promise<MapCompleteResult> {
+  const { ocrDir } = params;
+  const db = await ensureDatabase(ocrDir);
+  const dbPath = join(ocrDir, "data", "ocr.db");
+
+  // ── 1. Read and parse JSON ──
+  const rawJsonString = readJsonFromSource(params);
+  const label = params.source === "file" ? params.filePath : "stdin";
+  const raw = parseRawJson(rawJsonString, label);
+
+  // ── 2. Validate and compute counts ──
+  const meta = validateMapMeta(raw);
+  const counts = computeMapCounts(meta);
+
+  // ── 3. Resolve session and map run ──
+  const session = resolveSessionForCompletion(db, params.sessionId);
+  const mapRunNumber = params.mapRun ?? session.current_map_run;
+
+  // ── 4. Write map-meta.json when source is stdin ──
+  let metaPath: string | undefined;
+  if (params.source === "stdin") {
+    const runDir = join(session.session_dir, "map", "runs", `run-${mapRunNumber}`);
+    mkdirSync(runDir, { recursive: true });
+    metaPath = join(runDir, "map-meta.json");
+    writeFileSync(metaPath, JSON.stringify(meta, null, 2));
+  }
+
+  // ── 5. Write orchestration event with all data in metadata ──
+  // Note: `round` column stores the map run number for map_completed events.
+  // This is an intentional schema overload to avoid a separate column.
+  insertEvent(db, {
+    session_id: session.id,
+    event_type: "map_completed",
+    phase: "synthesis",
+    phase_number: 5,
+    round: mapRunNumber,
+    metadata: JSON.stringify({
+      section_count: counts.sectionCount,
+      file_count: counts.fileCount,
+      source: "orchestrator",
+    }),
+  });
+
+  saveDatabase(db, dbPath);
+
+  return { sessionId: session.id, mapRun: mapRunNumber, metaPath };
 }
 
 /**

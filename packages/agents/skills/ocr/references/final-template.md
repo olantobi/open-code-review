@@ -23,7 +23,8 @@ This synthesis process is designed to mirror how high-performing engineering tea
 
 - **Preserve all feedback** — Every finding from every reviewer appears, attributed
 - **Identify blockers** — Surface anything that should prevent merge
-- **Present suggestions** — Non-blocking improvements for author consideration
+- **Categorize should-fix items** — Issues that aren't blocking but should be addressed
+- **Present suggestions** — Lower-priority improvements for author consideration
 - **Assess requirements** — Evaluate against provided requirements (if any)
 - **Recommend action** — Clear verdict with rationale
 
@@ -53,11 +54,49 @@ A finding is a **blocker** if ANY of the following are true:
 
 **Any single reviewer can flag a blocker.** This is not subject to consensus—one engineer seeing a security hole is sufficient to block.
 
-### Step 3: Collect Suggestions
+### Step 3: Categorize Non-Blocking Findings
 
-All non-blocking feedback is preserved and attributed:
+All non-blocking feedback is categorized into **Should Fix** or **Suggestions**, then preserved and attributed.
+
+**Should Fix** — Issues that aren't blocking but should be addressed before or shortly after merge:
+
+| Should Fix Criteria | Examples |
+|---------------------|----------|
+| **Code quality issues** | Missing error handling, dead code, untested critical paths |
+| **Potential bugs** | Silent fallthrough, unvalidated input at boundaries, race conditions (non-data-loss) |
+| **Important refactors** | DRY violations with real maintenance cost, tight coupling between modules |
+| **Missing validation** | Input boundaries not enforced, missing null checks on external data |
+| **Functional gaps** | Feature partially implemented, edge case not handled |
+
+**Suggestions** — Low-priority improvements for author consideration:
+
+| Suggestion Criteria | Examples |
+|---------------------|----------|
+| **Style preferences** | Naming, formatting, early returns vs nested ifs |
+| **Minor refactors** | Extract small helper, reorder parameters, simplify expression |
+| **Documentation** | Add JSDoc, clarify comment, update README |
+| **Testing ideas** | Additional edge cases, snapshot tests, performance benchmarks |
+| **Informational** | Alternative approaches, FYI notes, future considerations |
 
 ```markdown
+## Should Fix
+
+### 1. {Title}
+
+**Flagged by**: @principal-1, @quality-1
+**Location**: `path/to/file.ts:42-50`
+
+{Description of the issue and why it should be fixed.}
+
+### 2. {Title}
+
+**Flagged by**: @quality-2
+**Location**: `path/to/other-file.ts:15`
+
+{Description.}
+
+---
+
 ## Suggestions
 
 ### Code Quality
@@ -74,7 +113,7 @@ All non-blocking feedback is preserved and attributed:
 - "Edge case for empty input not covered" — @testing-1
 ```
 
-**No suggestion is lost.** Even if only one reviewer mentions something, it surfaces.
+**No feedback is lost.** Even if only one reviewer mentions something, it surfaces.
 
 ### Step 4: Note Consensus and Dissent
 
@@ -200,15 +239,35 @@ The Tech Lead determines the verdict based on simple rules:
 
 ---
 
+## Should Fix
+
+{Issues that aren't blocking but should be addressed. Use numbered sub-headings.}
+
+### 1. {Title}
+
+**Flagged by**: @principal-1, @quality-1
+**Location**: `path/to/file.ts:42-50`
+
+{Description and why it should be fixed.}
+
+### 2. {Title}
+
+**Flagged by**: @quality-2
+**Location**: `path/to/other-file.ts:15`
+
+{Description.}
+
+---
+
 ## Suggestions
 
-{All non-blocking feedback, preserved and attributed}
+{Lower-priority improvements and informational feedback, preserved and attributed.}
 
 ### Code Quality
 - "Consider extracting the validation logic into a separate function" — @principal-1
 - "The error messages could be more user-friendly" — @quality-1
 
-### Performance  
+### Performance
 - "This query could benefit from an index on `user_id`" — @principal-2
 
 ### Testing
@@ -271,12 +330,12 @@ The Tech Lead determines the verdict based on simple rules:
 
 Full reviews available in session directory:
 
-| Reviewer | Blockers | Suggestions | File |
-|----------|----------|-------------|------|
-| @principal-1 | 0 | 3 | `rounds/round-{n}/reviews/principal-1.md` |
-| @principal-2 | 0 | 2 | `rounds/round-{n}/reviews/principal-2.md` |
-| @quality-1 | 0 | 4 | `rounds/round-{n}/reviews/quality-1.md` |
-| @security-1 | 1 | 2 | `rounds/round-{n}/reviews/security-1.md` |
+| Reviewer | Blockers | Should Fix | Suggestions | File |
+|----------|----------|------------|-------------|------|
+| @principal-1 | 0 | 1 | 3 | `rounds/round-{n}/reviews/principal-1.md` |
+| @principal-2 | 0 | 0 | 2 | `rounds/round-{n}/reviews/principal-2.md` |
+| @quality-1 | 0 | 1 | 4 | `rounds/round-{n}/reviews/quality-1.md` |
+| @security-1 | 1 | 0 | 2 | `rounds/round-{n}/reviews/security-1.md` |
 
 **Session**: `.ocr/sessions/{session-id}/`
 **Discourse**: `rounds/round-{n}/discourse.md`

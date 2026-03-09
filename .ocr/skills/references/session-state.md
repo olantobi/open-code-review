@@ -141,6 +141,79 @@ ocr state show
 
 Outputs the current session state from SQLite. Use this to inspect current session state.
 
+### `ocr state round-complete` — Sync structured round metrics
+
+**Recommended: pipe structured data from stdin** (CLI writes the file + event):
+
+```bash
+cat <<'JSON' | ocr state round-complete --stdin
+{ "schema_version": 1, "verdict": "APPROVE", "reviewers": [...] }
+JSON
+```
+
+The `--stdin` flag makes the CLI the **sole writer** of `round-meta.json`. The CLI:
+1. Validates the JSON schema
+2. Writes `round-meta.json` to the correct session round directory
+3. Derives counts from the findings array (never trusts self-reported counts)
+4. Records a `round_completed` orchestration event in SQLite
+
+The dashboard picks this up via `DbSyncWatcher` for real-time updates.
+
+**Alternative: read from existing file** (for manual use or debugging):
+
+```bash
+ocr state round-complete --file "rounds/round-1/round-meta.json"
+```
+
+Optional flags (both modes):
+```bash
+--session-id "{session-id}"   # Auto-detects active session if omitted
+--round 1                     # Auto-detects current round if omitted
+```
+
+### `ocr state map-complete` — Sync structured map metrics
+
+**Recommended: pipe structured data from stdin** (CLI writes the file + event):
+
+```bash
+cat <<'JSON' | ocr state map-complete --stdin
+{
+  "schema_version": 1,
+  "sections": [
+    {
+      "section_number": 1,
+      "title": "Core Logic",
+      "description": "Main business logic",
+      "files": [
+        { "file_path": "src/index.ts", "role": "Entry point", "lines_added": 10, "lines_deleted": 2 }
+      ]
+    }
+  ],
+  "dependencies": []
+}
+JSON
+```
+
+The `--stdin` flag makes the CLI the **sole writer** of `map-meta.json`. The CLI:
+1. Validates the JSON schema
+2. Writes `map-meta.json` to the correct session map run directory
+3. Derives counts from the sections array (never trusts self-reported counts)
+4. Records a `map_completed` orchestration event in SQLite
+
+The dashboard picks this up via `DbSyncWatcher` for real-time updates.
+
+**Alternative: read from existing file** (for manual use or debugging):
+
+```bash
+ocr state map-complete --file "map/runs/run-1/map-meta.json"
+```
+
+Optional flags (both modes):
+```bash
+--session-id "{session-id}"   # Auto-detects active session if omitted
+--map-run 1                   # Auto-detects current map run if omitted
+```
+
 ### `ocr state sync` — Rebuild from filesystem
 
 ```bash

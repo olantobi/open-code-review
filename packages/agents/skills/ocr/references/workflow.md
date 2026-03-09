@@ -129,7 +129,7 @@ Before proceeding to each phase, verify the required artifacts exist:
 | 4 | `context.md` exists | `rounds/round-{n}/reviews/{type}-{n}.md` for each reviewer; call `ocr state transition` |
 | 5 | ≥2 files in `rounds/round-{n}/reviews/` | Aggregated findings (inline); call `ocr state transition` |
 | 6 | Reviews complete | `rounds/round-{n}/discourse.md`; call `ocr state transition` |
-| 7 | `rounds/round-{n}/discourse.md` exists | `rounds/round-{n}/final.md`; call `ocr state transition` |
+| 7 | `rounds/round-{n}/discourse.md` exists | `rounds/round-{n}/round-meta.json`, `rounds/round-{n}/final.md`; call `ocr state round-complete` |
 | 8 | `rounds/round-{n}/final.md` exists | Present to user; call `ocr state close` |
 
 **NEVER skip directly to `final.md`** — this breaks progress tracking.
@@ -592,11 +592,11 @@ See `references/discourse.md` for detailed instructions.
    - Challenged and defended: +1
    - Challenged and undefended: -1
 
-4. Categorize findings:
-   - **Must Fix**: Critical issues, security vulnerabilities
-   - **Should Fix**: Important improvements
-   - **Consider**: Nice-to-haves, style suggestions
-   - **What's Working Well**: Positive feedback
+4. Categorize findings into three sections (see `references/final-template.md` for criteria):
+   - **Blockers**: Security vulnerabilities, data integrity risks, correctness bugs, breaking changes — must resolve before merge
+   - **Should Fix**: Code quality issues, potential bugs, missing validation, important refactors — address before or shortly after merge
+   - **Suggestions**: Style preferences, minor refactors, documentation, testing ideas — author's discretion
+   - **What's Working Well**: Positive feedback (separate encouragement section, not counted)
 
 5. **If requirements were provided**, include Requirements Assessment:
    - Which requirements are fully met?
@@ -612,7 +612,57 @@ See `references/discourse.md` for detailed instructions.
 
    These go in a prominent "Clarifying Questions" section for stakeholder response.
 
-7. **Write the final review file**:
+7. **Pipe structured round data to the CLI (BEFORE `final.md`)**:
+
+   > The CLI is the **sole writer** of `round-meta.json`. The orchestrator constructs JSON in memory and pipes it to the CLI, which validates the schema, writes the file to the correct session path, and records a `round_completed` orchestration event — all in one command.
+
+   Construct the JSON from synthesis knowledge, then pipe to the CLI:
+
+   ```bash
+   cat <<'JSON' | ocr state round-complete --stdin
+   {
+     "schema_version": 1,
+     "verdict": "REQUEST CHANGES",
+     "reviewers": [
+       {
+         "type": "principal",
+         "instance": 1,
+         "severity_high": 1,
+         "severity_medium": 4,
+         "severity_low": 2,
+         "severity_info": 0,
+         "findings": [
+           {
+             "title": "SQL Injection in query builder",
+             "category": "blocker",
+             "severity": "high",
+             "file_path": "src/db/query.ts",
+             "line_start": 42,
+             "line_end": 45,
+             "summary": "User input passed directly to raw SQL...",
+             "flagged_by": ["@principal-1", "@security-1"]
+           }
+         ]
+       }
+     ]
+   }
+   JSON
+   ```
+
+   The CLI will:
+   1. Validate the JSON schema (schema_version, verdict, reviewers, findings)
+   2. Write `round-meta.json` to `{session_dir}/rounds/round-{n}/round-meta.json`
+   3. Compute derived counts from the findings array (never self-reported)
+   4. Record a `round_completed` orchestration event in SQLite
+
+   **Finding categories**: `"blocker"` | `"should_fix"` | `"suggestion"` | `"style"`
+   **Finding severity**: `"critical"` | `"high"` | `"medium"` | `"low"` | `"info"`
+
+   Optional flags: `--session-id <id>` (auto-detects active session), `--round <number>` (auto-detects current round).
+
+   > **Do NOT write `round-meta.json` directly** — always pipe through the CLI so the schema is validated and the event is recorded atomically.
+
+8. **Write the final review file**:
    ```bash
    # OUTPUT FILE - must be exactly this path:
    FINAL_FILE="$SESSION_DIR/rounds/round-$CURRENT_ROUND/final.md"
@@ -620,7 +670,7 @@ See `references/discourse.md` for detailed instructions.
 
    Save synthesized review to `$FINAL_FILE`.
 
-See `references/final-template.md` for the template format.
+   See `references/final-template.md` for the template format.
 
 ### Phase 7 Checkpoint — MANDATORY VALIDATION
 
@@ -630,9 +680,18 @@ See `references/final-template.md` for the template format.
 # Set these based on your current session
 SESSION_DIR=".ocr/sessions/$(ls -1t .ocr/sessions/ | head -1)"
 CURRENT_ROUND=$(ls -1d "$SESSION_DIR/rounds/round-"* 2>/dev/null | wc -l | tr -d ' ')
+ROUND_META="$SESSION_DIR/rounds/round-$CURRENT_ROUND/round-meta.json"
 FINAL_FILE="$SESSION_DIR/rounds/round-$CURRENT_ROUND/final.md"
 
-# Check file exists
+# Check round-meta.json exists
+if [ -f "$ROUND_META" ]; then
+  echo "OK round-meta.json exists at $ROUND_META"
+else
+  echo "FAIL round-meta.json not found at $ROUND_META"
+  exit 1
+fi
+
+# Check final.md exists
 if [ -f "$FINAL_FILE" ]; then
   echo "OK final.md exists at $FINAL_FILE"
 else
@@ -650,8 +709,9 @@ fi
 ```
 
 **STOP and verify before proceeding:**
+- [ ] `rounds/round-{n}/round-meta.json` exists with valid structured data
 - [ ] `rounds/round-{n}/final.md` exists
-- [ ] Contains prioritized findings (Must Fix, Should Fix, Consider)
+- [ ] Contains categorized findings (Blockers, Should Fix, Suggestions)
 - [ ] Contains Clarifying Questions section (if any)
 - [ ] If requirements provided: Contains Requirements Assessment
 
@@ -670,9 +730,9 @@ fi
    # Code Review: {branch}
 
    ## Summary
-   {X} must-fix, {Y} should-fix, {Z} suggestions
+   {X} blockers, {Y} should-fix, {Z} suggestions
 
-   ## Must Fix
+   ## Blockers
    ...
 
    ## Should Fix
@@ -713,5 +773,5 @@ fi
 | 4 | Spawn reviewer tasks, `ocr state transition` | `rounds/round-{n}/reviews/*.md` |
 | 5 | Compare redundant runs, `ocr state transition` | aggregated findings |
 | 6 | Reviewer discourse, `ocr state transition` | `rounds/round-{n}/discourse.md` |
-| 7 | Synthesize and prioritize, `ocr state transition` | `rounds/round-{n}/final.md` |
+| 7 | Synthesize, pipe data to `ocr state round-complete --stdin`, write `final.md` | `rounds/round-{n}/round-meta.json` (CLI-written), `rounds/round-{n}/final.md` |
 | 8 | Display/post, `ocr state close` | Terminal output, GitHub |

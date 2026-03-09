@@ -405,10 +405,49 @@ See `references/map-personas/flow-analyst.md` for persona details.
    [ "$EXPECTED" -ne "$MAPPED" ] && echo "ERROR: Missing files!"
    ```
 
-11. **Save final map**:
+11. **Pipe structured map data to CLI**:
+
+    Construct a JSON object with the map's structured data and pipe it to the CLI. The CLI validates, writes `map-meta.json`, and records a `map_completed` orchestration event — all in one command.
+
+    ```bash
+    cat <<'JSON' | ocr state map-complete --stdin
+    {
+      "schema_version": 1,
+      "sections": [
+        {
+          "section_number": 1,
+          "title": "Section Title",
+          "description": "Section description",
+          "files": [
+            {
+              "file_path": "src/example.ts",
+              "role": "Entry point",
+              "lines_added": 10,
+              "lines_deleted": 2
+            }
+          ]
+        }
+      ],
+      "dependencies": [
+        {
+          "from_section": 2,
+          "from_title": "Tests",
+          "to_section": 1,
+          "to_title": "Core Logic",
+          "relationship": "tests"
+        }
+      ]
+    }
+    JSON
+    ```
+
+    > The CLI validates the JSON schema, writes `map-meta.json` to the correct run directory, and records the event in SQLite. The orchestrator MUST NOT write `map-meta.json` directly.
+
+12. **Save final map** (presentation artifact):
     ```
     .ocr/sessions/{id}/map/runs/run-{n}/map.md
     ```
+    > `map.md` is the human-readable presentation artifact. The dashboard uses `map-meta.json` for structured data; `map.md` is stored as raw markdown for display and chat context.
 
 ### Map Output Format
 
@@ -426,6 +465,7 @@ See `references/map-template.md` for the complete template.
 - [ ] Section Dependencies table generated
 - [ ] File Index complete
 - [ ] Completeness validated (all files appear in tables)
+- [ ] `map-meta.json` piped to CLI via `ocr state map-complete --stdin`
 - [ ] `map.md` written
 - [ ] `ocr state transition` called with `--phase "synthesis"`
 

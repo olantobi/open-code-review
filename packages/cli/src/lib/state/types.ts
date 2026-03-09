@@ -46,6 +46,117 @@ export type CloseParams = {
   ocrDir: string;
 };
 
+// ── Round Meta (orchestrator-first structured data) ──
+
+export type FindingCategory = "blocker" | "should_fix" | "suggestion" | "style";
+
+export type FindingSeverity = "critical" | "high" | "medium" | "low" | "info";
+
+export type RoundMetaFinding = {
+  title: string;
+  category: FindingCategory;
+  severity: FindingSeverity;
+  file_path?: string;
+  line_start?: number;
+  line_end?: number;
+  summary: string;
+  flagged_by?: string[];
+};
+
+export type RoundMetaReviewer = {
+  type: string;
+  instance: number;
+  /** Informational — not used for counting. Counts are derived from findings[].category. */
+  severity_high?: number;
+  /** Informational — not used for counting. */
+  severity_medium?: number;
+  /** Informational — not used for counting. */
+  severity_low?: number;
+  /** Informational — not used for counting. */
+  severity_info?: number;
+  findings: RoundMetaFinding[];
+};
+
+export type RoundMeta = {
+  schema_version: number;
+  verdict: string;
+  reviewers: RoundMetaReviewer[];
+};
+
+export type RoundCompleteParams =
+  | {
+      source: "file";
+      ocrDir: string;
+      sessionId?: string;
+      round?: number;
+      filePath: string;
+    }
+  | {
+      source: "stdin";
+      ocrDir: string;
+      sessionId?: string;
+      round?: number;
+      data: string;
+    };
+
+export type RoundCompleteResult = {
+  sessionId: string;
+  round: number;
+  metaPath?: string;
+};
+
+// ── Map Meta (structured map data) ──
+
+export type MapMetaFile = {
+  file_path: string;
+  role: string;
+  lines_added: number;
+  lines_deleted: number;
+};
+
+export type MapMetaSection = {
+  section_number: number;
+  title: string;
+  description?: string;
+  files: MapMetaFile[];
+};
+
+export type MapMetaDependency = {
+  from_section: number;
+  from_title: string;
+  to_section: number;
+  to_title: string;
+  relationship: string;
+};
+
+export type MapMeta = {
+  schema_version: number;
+  sections: MapMetaSection[];
+  dependencies?: MapMetaDependency[];
+};
+
+export type MapCompleteParams =
+  | {
+      source: "file";
+      ocrDir: string;
+      sessionId?: string;
+      mapRun?: number;
+      filePath: string;
+    }
+  | {
+      source: "stdin";
+      ocrDir: string;
+      sessionId?: string;
+      mapRun?: number;
+      data: string;
+    };
+
+export type MapCompleteResult = {
+  sessionId: string;
+  mapRun: number;
+  metaPath?: string;
+};
+
 export type ShowResult = {
   session: {
     id: string;

@@ -1,7 +1,8 @@
 import { useParams, Link } from 'react-router-dom'
 import { ArrowLeft, MessageSquare } from 'lucide-react'
 import { useState } from 'react'
-import { useRound, useRoundFindings, useArtifact } from './hooks/use-reviews'
+import { useRound, useRoundFindings, useArtifact, useUpdateRoundStatus } from './hooks/use-reviews'
+import type { RoundTriage } from '../../lib/api-types'
 import { ReviewerCard } from './components/reviewer-card'
 import { FindingsTable } from './components/findings-table'
 import { VerdictBanner } from '../../components/markdown/verdict-banner'
@@ -13,6 +14,14 @@ import { MarkdownRenderer } from '../../components/markdown/markdown-renderer'
 import { ChatPanel } from '../chat/components/chat-panel'
 import { PostReviewDialog } from './components/post-review-dialog'
 import { AddressFeedbackPopover } from './components/address-feedback-popover'
+
+const ROUND_STATUS_OPTIONS: { value: RoundTriage; label: string }[] = [
+  { value: 'needs_review', label: 'Needs Review' },
+  { value: 'in_progress', label: 'In Progress' },
+  { value: 'changes_made', label: 'Changes Made' },
+  { value: 'acknowledged', label: 'Acknowledged' },
+  { value: 'dismissed', label: 'Dismissed' },
+]
 
 export function RoundPage() {
   const { id: sessionId, round: roundStr } = useParams<{
@@ -27,6 +36,8 @@ export function RoundPage() {
   const { data: finalArtifact } = useArtifact(sessionId ?? '', 'final')
   const { data: finalHumanArtifact } = useArtifact(sessionId ?? '', 'final-human')
   const { data: discourseArtifact } = useArtifact(sessionId ?? '', 'discourse')
+
+  const updateStatus = useUpdateRoundStatus()
 
   const [showDiscourse, setShowDiscourse] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
@@ -66,7 +77,25 @@ export function RoundPage() {
 
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">Round {round.round_number}</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-semibold">Round {round.round_number}</h1>
+            <select
+              value={round.progress?.status ?? 'needs_review'}
+              onChange={(e) =>
+                updateStatus.mutate({
+                  roundId: round.id,
+                  status: e.target.value as RoundTriage,
+                })
+              }
+              className="rounded-md border border-zinc-300 bg-white px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-900"
+            >
+              {ROUND_STATUS_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
           <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
             {(round.reviewer_outputs ?? []).length} reviewer
             {(round.reviewer_outputs ?? []).length !== 1 ? 's' : ''}

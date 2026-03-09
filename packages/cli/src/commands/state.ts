@@ -22,9 +22,25 @@ import {
   stateClose,
   stateShow,
   stateSync,
+  stateRoundComplete,
+  stateMapComplete,
   resolveActiveSession,
 } from "../lib/state/index.js";
-import type { WorkflowType, ReviewPhase, MapPhase } from "../lib/state/types.js";
+import type { WorkflowType, ReviewPhase, MapPhase, RoundCompleteResult, MapCompleteResult } from "../lib/state/types.js";
+
+// ── Helpers ──
+
+async function readStdin(): Promise<string> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of process.stdin) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  const data = Buffer.concat(chunks).toString("utf-8").trim();
+  if (data.length === 0) {
+    throw new Error("No data received on stdin");
+  }
+  return data;
+}
 
 // ── init ──
 
@@ -104,6 +120,15 @@ const transitionSubcommand = new Command("transition")
       const targetDir = process.cwd();
       requireOcrSetup(targetDir);
       const ocrDir = join(targetDir, ".ocr");
+
+      const VALID_PHASES = new Set<string>([
+        "context", "change-context", "analysis", "reviews",
+        "aggregation", "discourse", "synthesis", "complete",
+        "map-context", "topology", "flow-analysis", "requirements-mapping",
+      ]);
+      if (!VALID_PHASES.has(options.phase)) {
+        throw new Error(`Invalid phase: "${options.phase}". Must be one of: ${[...VALID_PHASES].join(", ")}`);
+      }
 
       try {
         const sessionId = options.sessionId
@@ -271,6 +296,142 @@ const syncSubcommand = new Command("sync")
     }
   });
 
+// ── round-complete ──
+
+const roundCompleteSubcommand = new Command("round-complete")
+  .description("Import structured round data into SQLite")
+  .option("--file <path>", "Path to round-meta.json")
+  .option("--stdin", "Read round-meta JSON from stdin (recommended)")
+  .option("--session-id <id>", "Session ID (auto-detects latest active if omitted)")
+  .option("--round <number>", "Round number (auto-detects current if omitted)", parseInt)
+  .action(
+    async (options: {
+      file?: string;
+      stdin?: boolean;
+      sessionId?: string;
+      round?: number;
+    }) => {
+      const targetDir = process.cwd();
+      requireOcrSetup(targetDir);
+      const ocrDir = join(targetDir, ".ocr");
+
+      if (!options.file && !options.stdin) {
+        console.error(chalk.red("Error: Provide either --file <path> or --stdin"));
+        process.exit(1);
+      }
+      if (options.file && options.stdin) {
+        console.error(chalk.red("Error: --file and --stdin are mutually exclusive"));
+        process.exit(1);
+      }
+
+      try {
+        let result: RoundCompleteResult;
+
+        if (options.stdin) {
+          const data = await readStdin();
+          result = await stateRoundComplete({
+            source: "stdin",
+            ocrDir,
+            data,
+            sessionId: options.sessionId,
+            round: options.round,
+          });
+        } else if (options.file) {
+          result = await stateRoundComplete({
+            source: "file",
+            ocrDir,
+            filePath: options.file,
+            sessionId: options.sessionId,
+            round: options.round,
+          });
+        } else {
+          // Unreachable — mutual exclusion guard above ensures one is set
+          process.exit(1);
+        }
+
+        console.log(chalk.green("Round data imported successfully."));
+        if (result.metaPath) {
+          console.log(chalk.dim(`Wrote ${result.metaPath}`));
+        }
+      } catch (error) {
+        console.error(
+          chalk.red(
+            `Error: ${error instanceof Error ? error.message : "Failed to import round data"}`,
+          ),
+        );
+        process.exit(1);
+      }
+    },
+  );
+
+// ── map-complete ──
+
+const mapCompleteSubcommand = new Command("map-complete")
+  .description("Import structured map run data into SQLite")
+  .option("--file <path>", "Path to map-meta.json")
+  .option("--stdin", "Read map-meta JSON from stdin (recommended)")
+  .option("--session-id <id>", "Session ID (auto-detects latest active if omitted)")
+  .option("--map-run <number>", "Map run number (auto-detects current if omitted)", parseInt)
+  .action(
+    async (options: {
+      file?: string;
+      stdin?: boolean;
+      sessionId?: string;
+      mapRun?: number;
+    }) => {
+      const targetDir = process.cwd();
+      requireOcrSetup(targetDir);
+      const ocrDir = join(targetDir, ".ocr");
+
+      if (!options.file && !options.stdin) {
+        console.error(chalk.red("Error: Provide either --file <path> or --stdin"));
+        process.exit(1);
+      }
+      if (options.file && options.stdin) {
+        console.error(chalk.red("Error: --file and --stdin are mutually exclusive"));
+        process.exit(1);
+      }
+
+      try {
+        let result: MapCompleteResult;
+
+        if (options.stdin) {
+          const data = await readStdin();
+          result = await stateMapComplete({
+            source: "stdin",
+            ocrDir,
+            data,
+            sessionId: options.sessionId,
+            mapRun: options.mapRun,
+          });
+        } else if (options.file) {
+          result = await stateMapComplete({
+            source: "file",
+            ocrDir,
+            filePath: options.file,
+            sessionId: options.sessionId,
+            mapRun: options.mapRun,
+          });
+        } else {
+          // Unreachable — mutual exclusion guard above ensures one is set
+          process.exit(1);
+        }
+
+        console.log(chalk.green("Map data imported successfully."));
+        if (result.metaPath) {
+          console.log(chalk.dim(`Wrote ${result.metaPath}`));
+        }
+      } catch (error) {
+        console.error(
+          chalk.red(
+            `Error: ${error instanceof Error ? error.message : "Failed to import map data"}`,
+          ),
+        );
+        process.exit(1);
+      }
+    },
+  );
+
 // ── Main state command ──
 
 export const stateCommand = new Command("state")
@@ -279,4 +440,6 @@ export const stateCommand = new Command("state")
   .addCommand(transitionSubcommand)
   .addCommand(closeSubcommand)
   .addCommand(showSubcommand)
-  .addCommand(syncSubcommand);
+  .addCommand(syncSubcommand)
+  .addCommand(roundCompleteSubcommand)
+  .addCommand(mapCompleteSubcommand);

@@ -6,6 +6,7 @@ import { stateCommand } from "./commands/state";
 import { updateCommand } from "./commands/update";
 import { dashboardCommand } from "./commands/dashboard";
 import { doctorCommand } from "./commands/doctor";
+import { checkForUpdate, printUpdateNotification } from "./lib/update-check.js";
 
 // Injected at build time by esbuild `define`. Falls back to package.json
 // for dev (tsx) where the define is not applied.
@@ -14,6 +15,13 @@ const cliVersion =
   typeof __CLI_VERSION__ !== "undefined"
     ? __CLI_VERSION__
     : (createRequire(import.meta.url)("../package.json") as { version: string }).version;
+
+// Only check for updates on human-facing commands (not AI-invoked ones like `state`)
+const HUMAN_COMMANDS = new Set(["init", "update", "doctor", "dashboard", "progress"]);
+const subcommand = process.argv[2];
+const updateCheck = subcommand && HUMAN_COMMANDS.has(subcommand)
+  ? checkForUpdate(cliVersion)
+  : null;
 
 const program = new Command();
 
@@ -29,4 +37,14 @@ program.addCommand(updateCommand);
 program.addCommand(dashboardCommand);
 program.addCommand(doctorCommand);
 
-program.parse();
+await program.parseAsync();
+
+if (updateCheck) {
+  const updateResult = await Promise.race([
+    updateCheck,
+    new Promise<null>((r) => setTimeout(() => r(null), 500)),
+  ]);
+  if (updateResult?.updateAvailable) {
+    printUpdateNotification(updateResult);
+  }
+}

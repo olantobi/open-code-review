@@ -17,7 +17,8 @@ Every OCR session creates files in `.ocr/sessions/{session-id}/`:
 │       │   ├── topology.md         # File categorization and sections
 │       │   ├── flow-analysis.md    # Dependency tracing results
 │       │   ├── requirements-mapping.md  # Coverage matrix (if requirements)
-│       │   └── map.md              # Final map output
+│       │   ├── map-meta.json       # Structured map data (written by CLI via map-complete --stdin)
+│       │   └── map.md              # Final map output (presentation artifact)
 │       └── run-2/          # Subsequent runs (created on re-map)
 │           └── ...         # Same structure as run-1
 └── rounds/                 # All round-specific artifacts
@@ -31,11 +32,13 @@ Every OCR session creates files in `.ocr/sessions/{session-id}/`:
     │   │   ├── testing-1.md    # (if testing reviewer assigned)
     │   │   └── {type}-{n}.md   # (additional assigned custom reviewers)
     │   ├── discourse.md    # Cross-reviewer discussion for round 1
+    │   ├── round-meta.json # Structured review data (written by CLI via round-complete --stdin)
     │   └── final.md        # Synthesized final review for round 1
     └── round-2/            # Subsequent rounds (created on re-review)
         ├── reviews/
         │   └── ...         # Same structure as round-1
         ├── discourse.md
+        ├── round-meta.json
         └── final.md
 ```
 
@@ -80,7 +83,8 @@ OCR uses a **run-based architecture** for maps, parallel to review rounds.
 | `topology.md` | 2 | File categorization and section groupings |
 | `flow-analysis.md` | 3 | Upstream/downstream dependency tracing |
 | `requirements-mapping.md` | 4 | Requirements coverage matrix (if requirements provided) |
-| `map.md` | 5 | Final synthesized Code Review Map |
+| `map-meta.json` | 5 | Structured map data (written by CLI via `map-complete --stdin`) |
+| `map.md` | 5 | Final synthesized Code Review Map (presentation artifact) |
 
 **When to use multiple runs**:
 - Changeset has evolved since last map
@@ -97,6 +101,7 @@ OCR uses a **run-based architecture** for maps, parallel to review rounds.
 | `context.md` | 2 | Change summary, diff analysis, Tech Lead guidance | All reviewers |
 | `rounds/round-{n}/reviews/{type}-{n}.md` | 4 | Individual reviewer outputs | Discourse, Synthesis |
 | `rounds/round-{n}/discourse.md` | 6 | Cross-reviewer discussion results | Synthesis |
+| `rounds/round-{n}/round-meta.json` | 7 | Structured review data (written by CLI via `round-complete --stdin`) | Dashboard |
 | `rounds/round-{n}/final.md` | 7 | Synthesized final review | Show, Post commands |
 
 ### Optional Files
@@ -139,7 +144,7 @@ rounds/round-1/reviews/performance-1.md   # Custom reviewer
 | 4 | Parallel Reviews | `rounds/round-{n}/reviews/{type}-{n}.md` for each reviewer, call `ocr state transition` |
 | 5 | Aggregation | (Inline analysis), call `ocr state transition` |
 | 6 | Discourse | `rounds/round-{n}/discourse.md`, call `ocr state transition` |
-| 7 | Synthesis | `rounds/round-{n}/final.md`, call `ocr state transition` |
+| 7 | Synthesis | Pipe data to `ocr state round-complete --stdin` (writes `round-meta.json`), write `final.md` |
 | 8 | Presentation | Call `ocr state close` |
 
 ## State Transitions and File Validation
@@ -153,7 +158,7 @@ When calling `ocr state transition`, verify the corresponding file exists:
 | `"analysis"` | `context.md` (with Tech Lead guidance) |
 | `"reviews"` | At least 2 files in `rounds/round-{current_round}/reviews/` |
 | `"discourse"` | `rounds/round-{current_round}/discourse.md` |
-| `"synthesis"` | `rounds/round-{current_round}/final.md` |
+| `"synthesis"` | `rounds/round-{current_round}/round-meta.json`, `rounds/round-{current_round}/final.md` |
 
 ## Session ID Format
 

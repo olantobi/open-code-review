@@ -228,6 +228,30 @@ const MIGRATIONS: Migration[] = [
       CREATE INDEX idx_events_type ON orchestration_events(event_type);
     `,
   },
+  {
+    version: 6,
+    description: "Add orchestrator-first columns to review_rounds for round-meta.json support",
+    sql: `
+      ALTER TABLE review_rounds ADD COLUMN source TEXT DEFAULT NULL;
+      ALTER TABLE review_rounds ADD COLUMN reviewer_count INTEGER DEFAULT 0;
+      ALTER TABLE review_rounds ADD COLUMN total_finding_count INTEGER DEFAULT 0;
+    `,
+  },
+  {
+    version: 7,
+    description: "Add category column to review_findings for blocker/should_fix/suggestion classification",
+    sql: `
+      ALTER TABLE review_findings ADD COLUMN category TEXT DEFAULT NULL;
+    `,
+  },
+  {
+    version: 8,
+    description: "Add orchestrator-first columns to map_runs for map-meta.json support",
+    sql: `
+      ALTER TABLE map_runs ADD COLUMN source TEXT DEFAULT NULL;
+      ALTER TABLE map_runs ADD COLUMN section_count INTEGER DEFAULT 0;
+    `,
+  },
 ];
 
 /**

@@ -645,7 +645,9 @@ See `references/discourse.md` for detailed instructions.
 
    > The CLI is the **sole writer** of `round-meta.json`. The orchestrator constructs JSON in memory and pipes it to the CLI, which validates the schema, writes the file to the correct session path, and records a `round_completed` orchestration event — all in one command.
 
-   Construct the JSON from synthesis knowledge, then pipe to the CLI:
+   Construct the JSON from your **post-synthesis conclusions**, then pipe to the CLI.
+
+   > **CRITICAL — Category reflects synthesis, not original reviewer tags**: The `category` field on each finding must match the final synthesized classification — NOT the category the individual reviewer originally used. If discourse or synthesis promoted a `should_fix` to `blocker` (or demoted a `blocker` to `should_fix`), the JSON you pipe here MUST use the **promoted/demoted category**. The dashboard derives all counts from these categories. If they don't match `final.md`, the dashboard will show wrong numbers.
 
    ```bash
    cat <<'JSON' | ocr state round-complete --stdin

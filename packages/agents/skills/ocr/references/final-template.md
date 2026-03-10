@@ -356,3 +356,5 @@ Full reviews available in session directory:
 5. **Author has autonomy** — For suggestions, the author decides what to address. Trust the engineer.
 
 6. **Tech Lead facilitates** — The Tech Lead synthesizes and recommends, but doesn't override individual blockers or suppress feedback.
+
+7. **`round-meta.json` matches `final.md`** — When piping data to `ocr state round-complete --stdin`, the `category` on each finding MUST reflect the **post-synthesis** classification. If discourse or synthesis promoted a `should_fix` to `blocker` (or any other re-categorization), update the `category` field in the JSON accordingly. The dashboard derives all counts from `round-meta.json` — a mismatch means wrong numbers on the dashboard.

@@ -157,6 +157,44 @@ This PR adds a new user profile API endpoint that returns user data.
 Review this code from a security perspective...
 ```
 
+## Ephemeral Reviewer Variant
+
+When spawning an ephemeral reviewer (from `--reviewer`), use the same task structure but replace the persona section with a synthesized prompt based on the user's description.
+
+**Key differences from library reviewers:**
+- No `.md` file lookup — the persona is synthesized by the Tech Lead from the `--reviewer` value
+- Output file naming: `ephemeral-{n}.md` instead of `{type}-{n}.md`
+- Redundancy is always 1 (ephemeral reviewers are inherently unique)
+- The ephemeral reviewer file MUST include the original description at the top
+
+```markdown
+# Code Review Task: Ephemeral Reviewer
+
+## Your Persona
+
+> **User description**: "{the --reviewer value}"
+
+{Tech Lead's synthesized persona based on the description. This should expand the user's
+description into a focused reviewer identity with clear guidance on what to look for,
+while maintaining the same structure as library reviewer personas.}
+
+## Project Standards
+{same as library reviewers}
+
+## Tech Lead Guidance
+{same as library reviewers}
+
+## Code to Review
+{same as library reviewers}
+
+## Your Task
+{same as library reviewers — full agency, same output format}
+```
+
+**Output format**: Ephemeral reviewers use the exact same output format as library reviewers (`## Summary`, `## Findings`, `## What's Working Well`, etc.). The only addition is the original description quoted at the top of the review file.
+
+---
+
 ## Reviewer Guidelines
 
 ### Be Thorough But Focused

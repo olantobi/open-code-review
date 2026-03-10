@@ -19,13 +19,21 @@ ocr dashboard
 `ocr init` detects your installed AI tools and configures each one automatically. Then use your AI assistant to run a review:
 
 ```
-/ocr:review                     # Claude Code / Cursor
-/ocr-review                     # Windsurf / other tools
-/ocr-review against spec.md     # With requirements context
-/ocr-map                        # Code Review Map for large changesets
+/ocr:review                                          # Claude Code / Cursor
+/ocr-review                                          # Windsurf / other tools
+/ocr-review against spec.md                          # With requirements context
+/ocr-review --team principal:2,martin-fowler:1       # Custom team composition
+/ocr-review --reviewer "Focus on error handling"     # Add an ephemeral reviewer
+/ocr-map                                             # Code Review Map for large changesets
 ```
 
 Run `ocr doctor` to verify your setup at any time.
+
+## Reviewer Library
+
+OCR ships with 20+ reviewer personas across four tiers — holistic generalists (Principal, Staff Engineer, Architect), domain specialists (Security, Testing, Frontend, Performance, and more), and famous engineer personas (Martin Fowler, Kent Beck, Sandi Metz, and others) who review through the lens of their published work.
+
+Add ephemeral one-off reviewers with `--reviewer`, or create persistent custom reviewers with `/ocr:create-reviewer`.
 
 ## Commands
 
@@ -78,6 +86,14 @@ ocr update --dry-run          # Preview changes
 ocr update --commands         # Commands only
 ocr update --skills           # Skills and references only
 ocr update --inject           # AGENTS.md/CLAUDE.md only
+```
+
+### `ocr reviewers`
+
+Manage reviewer personas. Sync metadata from reviewer markdown files to `reviewers-meta.json` for the dashboard.
+
+```bash
+ocr reviewers sync --stdin      # Pipe JSON from AI-generated metadata
 ```
 
 ### `ocr state`

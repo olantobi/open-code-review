@@ -1,6 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Play, ShieldAlert, Sparkles } from 'lucide-react'
 import { cn } from '../../../lib/utils'
+import { useReviewers } from '../hooks/use-reviewers'
+import { ReviewerDefaults, type ReviewerSelection } from './reviewer-defaults'
+import { ReviewerDialog } from './reviewer-dialog'
 
 // ── Command registry ──
 
@@ -49,25 +52,68 @@ const COMMANDS: CommandDef[] = [
 export type ParsedCommand = {
   commandId: string
   params: Record<string, string | boolean>
+  team?: ReviewerSelection[]
+}
+
+/**
+ * Extract all `--reviewer` values from a raw command string.
+ * Supports optional redundancy prefix: `--reviewer 2:"description"` or `--reviewer "description"`.
+ * Handles both single-quoted and double-quoted values.
+ * Returns the string with --reviewer flags removed, plus the extracted entries.
+ */
+function extractReviewerFlags(raw: string): { cleaned: string; entries: { description: string; count: number }[] } {
+  const entries: { description: string; count: number }[] = []
+  // Match --reviewer optionally followed by N: then a quoted string
+  const cleaned = raw.replace(/--reviewer\s+(?:(\d+):)?(?:"([^"]*?)"|'([^']*?)')/g, (_match, countStr, dq, sq) => {
+    entries.push({
+      description: dq ?? sq ?? '',
+      count: parseInt(countStr ?? '1', 10) || 1,
+    })
+    return ''
+  })
+  return { cleaned: cleaned.replace(/\s{2,}/g, ' ').trim(), entries }
 }
 
 export function parseCommandString(raw: string): ParsedCommand | null {
-  const normalized = raw.replace(/^ocr\s+/, '')
+  // Extract --reviewer flags first (they contain spaces that break split)
+  const { cleaned, entries: reviewerEntries } = extractReviewerFlags(raw)
+
+  const normalized = cleaned.replace(/^ocr\s+/, '')
   const parts = normalized.split(/\s+/)
   const commandId = parts[0] ?? ''
 
   if (!COMMANDS.find((c) => c.id === commandId)) return null
 
   const params: Record<string, string | boolean> = {}
+  let team: ReviewerSelection[] | undefined
   let i = 1
   while (i < parts.length) {
     const token = parts[i] ?? ''
     if (token === '--fresh') {
       params['fresh'] = true
       i++
+    } else if (token === '--team' && i + 1 < parts.length) {
+      const teamStr = parts[i + 1] ?? ''
+      team = teamStr.split(',').map((entry) => {
+        const [id = '', countStr] = entry.split(':')
+        return { id, count: parseInt(countStr ?? '1', 10) || 1 }
+      }).filter((s) => s.id.length > 0)
+      i += 2
     } else if (token === '--requirements' && i + 1 < parts.length) {
-      // Consume all remaining tokens as the requirements value
-      params['requirements'] = parts.slice(i + 1).join(' ')
+      // Consume remaining tokens as requirements (must be last)
+      const remaining = parts.slice(i + 1)
+      // Stop at --team if it appears after --requirements
+      const teamIdx = remaining.indexOf('--team')
+      if (teamIdx >= 0) {
+        params['requirements'] = remaining.slice(0, teamIdx).join(' ')
+        const teamStr = remaining[teamIdx + 1] ?? ''
+        team = teamStr.split(',').map((entry) => {
+          const [id = '', countStr] = entry.split(':')
+          return { id, count: parseInt(countStr ?? '1', 10) || 1 }
+        }).filter((s) => s.id.length > 0)
+      } else {
+        params['requirements'] = remaining.join(' ')
+      }
       break
     } else if (!token.startsWith('--')) {
       params['target'] = token
@@ -77,7 +123,35 @@ export function parseCommandString(raw: string): ParsedCommand | null {
     }
   }
 
-  return { commandId, params }
+  // Append ephemeral selections from --reviewer flags
+  if (reviewerEntries.length > 0) {
+    if (!team) team = []
+    reviewerEntries.forEach((entry, idx) => {
+      team!.push({ id: `ephemeral-${idx + 1}`, count: entry.count, description: entry.description })
+    })
+  }
+
+  return { commandId, params, team }
+}
+
+// ── Helpers ──
+
+function serializeTeam(selection: ReviewerSelection[]): string {
+  return selection
+    .filter((s) => !s.description)
+    .map((s) => `${s.id}:${s.count}`)
+    .join(',')
+}
+
+function selectionsEqual(a: ReviewerSelection[], b: ReviewerSelection[]): boolean {
+  // Ephemeral entries always make selections "different" from defaults
+  if (a.some((s) => s.description) || b.some((s) => s.description)) return false
+  if (a.length !== b.length) return false
+  const mapA = new Map(a.map((s) => [s.id, s.count]))
+  for (const s of b) {
+    if (mapA.get(s.id) !== s.count) return false
+  }
+  return true
 }
 
 // ── Component ──
@@ -97,7 +171,36 @@ export function CommandPalette({ isRunning, runningCount, onRunCommand, prefill,
   const [highlighted, setHighlighted] = useState(false)
   const highlightTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
+  // Reviewer state
+  const { reviewers, defaults, isLoaded } = useReviewers()
+  const [teamOverride, setTeamOverride] = useState<ReviewerSelection[] | null>(null)
+  const [dialogOpen, setDialogOpen] = useState(false)
+
   const selectedCommand = COMMANDS.find((c) => c.id === selectedId) ?? COMMANDS[0]!
+  const isReview = selectedCommand.id === 'review'
+
+  // Compute default selection from meta.json defaults
+  const defaultSelection: ReviewerSelection[] = isLoaded
+    ? defaults.map((id) => {
+        // Try to infer count from config default_team pattern (principal:2 etc.)
+        // For now, default to 1 per reviewer in the defaults list.
+        // If the same ID appears multiple times in defaults, count them.
+        return { id, count: 1 }
+      })
+      // Deduplicate and sum counts for same IDs
+      .reduce<ReviewerSelection[]>((acc, s) => {
+        const existing = acc.find((a) => a.id === s.id)
+        if (existing) {
+          existing.count += s.count
+        } else {
+          acc.push({ ...s })
+        }
+        return acc
+      }, [])
+    : []
+
+  // Active selection: override or defaults
+  const activeSelection = teamOverride ?? defaultSelection
 
   // Handle prefill from history re-run — synchronous "adjust state during render" pattern
   const [prevPrefill, setPrevPrefill] = useState<ParsedCommand | null>(null)
@@ -106,6 +209,7 @@ export function CommandPalette({ isRunning, runningCount, onRunCommand, prefill,
     if (prefill) {
       setSelectedId(prefill.commandId)
       setParamValues(prefill.params)
+      setTeamOverride(prefill.team ?? null)
       setConfirming(false)
       setHighlighted(true)
       onPrefillConsumed()
@@ -123,12 +227,29 @@ export function CommandPalette({ isRunning, runningCount, onRunCommand, prefill,
     if (id === selectedId) return
     setSelectedId(id)
     setParamValues({})
+    setTeamOverride(null)
     setConfirming(false)
   }
 
   function setParam(name: string, value: string | boolean) {
     setParamValues((prev) => ({ ...prev, [name]: value }))
   }
+
+  function handleRemoveReviewer(id: string) {
+    const current = teamOverride ?? defaultSelection
+    const next = current.filter((s) => s.id !== id)
+    setTeamOverride(next)
+  }
+
+  const handleApplyReviewers = useCallback((selection: ReviewerSelection[]) => {
+    // If selection matches defaults exactly, clear override
+    if (selectionsEqual(selection, defaultSelection)) {
+      setTeamOverride(null)
+    } else {
+      setTeamOverride(selection)
+    }
+    setDialogOpen(false)
+  }, [defaultSelection])
 
   function buildCommandString(): string {
     const parts = [selectedCommand.command]
@@ -140,6 +261,26 @@ export function CommandPalette({ isRunning, runningCount, onRunCommand, prefill,
 
     if (paramValues['fresh'] === true) {
       parts.push('--fresh')
+    }
+
+    // Add --team if reviewer selection differs from defaults (library reviewers only)
+    if (isReview && teamOverride !== null) {
+      const teamStr = serializeTeam(teamOverride)
+      if (teamStr) {
+        parts.push('--team', teamStr)
+      }
+
+      // Add --reviewer flags for ephemeral reviewers (with optional count prefix)
+      for (const s of teamOverride) {
+        if (s.description) {
+          const escaped = s.description.replace(/"/g, '\\"')
+          if (s.count > 1) {
+            parts.push('--reviewer', `${s.count}:"${escaped}"`)
+          } else {
+            parts.push('--reviewer', `"${escaped}"`)
+          }
+        }
+      }
     }
 
     const requirements = paramValues['requirements']
@@ -159,6 +300,7 @@ export function CommandPalette({ isRunning, runningCount, onRunCommand, prefill,
     const cmd = buildCommandString()
     setConfirming(false)
     setParamValues({})
+    setTeamOverride(null)
     onRunCommand(cmd)
   }
 
@@ -236,6 +378,18 @@ export function CommandPalette({ isRunning, runningCount, onRunCommand, prefill,
               </div>
             ),
           )}
+
+          {/* Reviewer selection (review command only) */}
+          {isReview && (
+            <ReviewerDefaults
+              reviewers={reviewers}
+              selection={activeSelection}
+              isLoaded={isLoaded}
+              disabled={isRunning}
+              onRemove={handleRemoveReviewer}
+              onCustomize={() => setDialogOpen(true)}
+            />
+          )}
         </div>
 
         {/* Run button */}
@@ -292,6 +446,17 @@ export function CommandPalette({ isRunning, runningCount, onRunCommand, prefill,
             </div>
           </div>
         </div>
+      )}
+
+      {/* Reviewer selection dialog */}
+      {isReview && (
+        <ReviewerDialog
+          open={dialogOpen}
+          reviewers={reviewers}
+          initialSelection={activeSelection}
+          onApply={handleApplyReviewers}
+          onClose={() => setDialogOpen(false)}
+        />
       )}
     </div>
   )

@@ -5,6 +5,7 @@ import { HomePage } from './features/home/home-page'
 import { SessionsPage } from './features/sessions/sessions-page'
 import { SessionDetailPage } from './features/sessions/session-detail-page'
 import { CommandsPage } from './features/commands/commands-page'
+import { ReviewersPage } from './features/reviewers/reviewers-page'
 import { MapRunPage } from './features/map/map-run-page'
 import { RoundPage } from './features/reviews/round-page'
 import { ReviewerDetailPage } from './features/reviews/reviewer-detail-page'
@@ -42,6 +43,7 @@ export const router = createBrowserRouter([
       { path: 'sessions/:id/maps/:run', element: withErrorBoundary(<MapRunPage />), errorElement: <RouteErrorFallback /> },
       { path: 'reviews', element: withErrorBoundary(<ReviewsPage />), errorElement: <RouteErrorFallback /> },
       { path: 'commands', element: withErrorBoundary(<CommandsPage />), errorElement: <RouteErrorFallback /> },
+      { path: 'reviewers', element: withErrorBoundary(<ReviewersPage />), errorElement: <RouteErrorFallback /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },

@@ -26,6 +26,7 @@ import { createStatsRouter } from './routes/stats.js'
 import { createCommandsRouter } from './routes/commands.js'
 import { createConfigRouter } from './routes/config.js'
 import { createChatRouter } from './routes/chat.js'
+import { createReviewersRouter, watchReviewersMeta } from './routes/reviewers.js'
 import { AiCliService } from './services/ai-cli/index.js'
 import { FilesystemSync } from './services/filesystem-sync.js'
 import { DbSyncWatcher } from './services/db-sync-watcher.js'
@@ -272,6 +273,7 @@ export async function startServer(options: StartServerOptions = {}): Promise<voi
   app.use('/api/commands', createCommandsRouter(db))
   app.use('/api/config', createConfigRouter(ocrDir, aiCliService))
   app.use('/api/sessions', createChatRouter(db, ocrDir))
+  app.use('/api/reviewers', createReviewersRouter(ocrDir))
 
   // ── Static file serving (production) ──
 
@@ -341,6 +343,9 @@ export async function startServer(options: StartServerOptions = {}): Promise<voi
   saveDb(db, ocrDir)
   fsSync.startWatching()
   console.log(`Watching sessions: ${sessionsDir}`)
+
+  // ── Reviewers meta watcher ──
+  const stopReviewersWatch = watchReviewersMeta(ocrDir, io)
 
   // ── Start server ──
 
@@ -437,6 +442,7 @@ export async function startServer(options: StartServerOptions = {}): Promise<voi
 
     dbSyncWatcher.stopWatching()
     fsSync.stopWatching()
+    stopReviewersWatch()
     io.close()
     httpServer.close(() => {
       try { saveDb(db, ocrDir) } catch { /* ignore */ }

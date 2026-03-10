@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Home, GitBranch, FileSearch, Terminal } from 'lucide-react'
+import { Home, GitBranch, FileSearch, Terminal, Users } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import { useSocket } from '../../providers/socket-provider'
 import { useCommandState } from '../../providers/command-state-provider'
@@ -9,6 +9,7 @@ import { useIdeConfig } from '../../hooks/use-ide-config'
 const NAV_ITEMS = [
   { to: '/', label: 'Home', icon: Home },
   { to: '/commands', label: 'Commands', icon: Terminal },
+  { to: '/reviewers', label: 'Team', icon: Users },
   { to: '/sessions', label: 'Sessions', icon: GitBranch },
   { to: '/reviews', label: 'Reviews', icon: FileSearch },
 ] as const

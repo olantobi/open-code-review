@@ -1,3 +1,14 @@
+## 1.8.1 (2026-03-10)
+
+### 🩹 Fixes
+
+- **agents:** require post-synthesis categories in round-meta.json ([#7](https://github.com/spencermarx/open-code-review/issues/7))
+
+### ❤️ Thank You
+
+- claude-flow @agentic-org
+- Spencer Marx
+
 ## 1.5.1 (2026-03-06)
 
 ### 🚀 Features

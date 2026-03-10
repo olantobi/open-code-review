@@ -17,6 +17,8 @@
 
 ## Quick Start
 
+**Prerequisites:** Node.js >= 20, Git, and an [AI coding assistant](#supported-ai-tools).
+
 ```bash
 # 1. Install the CLI globally
 npm install -g @open-code-review/cli
@@ -28,6 +30,8 @@ ocr init
 # 3. Launch the dashboard and run your first review
 ocr dashboard
 ```
+
+Your browser will open the OCR dashboard — you're ready to run your first review.
 
 `ocr init` detects your installed AI tools (Claude Code, Cursor, Windsurf, and [11 more](#supported-ai-tools)) and configures each one automatically. Then open the dashboard to run a review, browse results, and manage your workflow from the browser.
 
@@ -47,7 +51,7 @@ When you ask an AI to "review my code," you get a single perspective — one pas
 
 - **Multi-agent redundancy** — Multiple reviewer instances examine your code independently. Different attention patterns catch different issues. What one reviewer misses, another finds.
 - **Discourse before synthesis** — Reviewers don't just produce findings — they debate them. They challenge assumptions, validate concerns, and surface questions no single reviewer would ask.
-- **Fully customizable teams** — You control which reviewer personas run, how many of each, and what project context they use. Create custom reviewers for your domain.
+- **Fully customizable teams** — Pick from 28 reviewer personas (including famous engineers like Martin Fowler, Kent Beck, and Sandi Metz), create your own persistent reviewers, or describe ephemeral one-off reviewers inline.
 - **Requirements-aware** — Pass in a spec, proposal, or acceptance criteria. Every reviewer evaluates the code against your stated requirements, not just general best practices.
 - **Project context** — OCR discovers your standards from `CLAUDE.md`, `.cursorrules`, OpenSpec configs, and other common patterns. Reviewers apply *your* conventions.
 
@@ -91,6 +95,8 @@ When you ask an AI to "review my code," you get a single perspective — one pas
   - [GitHub PR Posting](#github-pr-posting)
   - [Multi-Round Reviews](#multi-round-reviews)
   - [Custom Reviewers](#custom-reviewers)
+  - [Famous Engineer Personas](#famous-engineer-personas)
+  - [Ephemeral Reviewers](#ephemeral-reviewers)
   - [Real-Time Progress](#real-time-progress)
   - [Address Feedback](#address-feedback)
   - [Session Notes & Chat](#session-notes--chat)
@@ -144,6 +150,10 @@ Two posting modes from the review round page:
 <p align="center">
   <img src="assets/ocr-tool-example-translated-human-review.png" alt="Human-voice review posted to GitHub PR" width="700" />
 </p>
+
+### Manage your review team
+
+The **Team** page lets you browse all 28 reviewer personas grouped by tier (Generalists, Specialists, Famous Engineers, Custom). View full prompts, focus areas, and persona details. Create new reviewers or sync metadata — all from the dashboard.
 
 ### Address Feedback
 
@@ -309,27 +319,58 @@ Running `/ocr-review` on an existing session checks if the current round is comp
 
 ### Custom Reviewers
 
-Create domain-specific reviewers by adding files to `.ocr/skills/references/reviewers/`:
+OCR ships with 28 reviewer personas across four tiers — generalists, specialists, famous engineers, and custom. Browse and manage them from the dashboard's **Team** page, or create your own.
 
-```markdown
-# .ocr/skills/references/reviewers/performance.md
+Three ways to build your review team:
 
-# Performance Engineer
+| Mode | How | Persists? |
+|------|-----|-----------|
+| **Library reviewers** | Select from the Team page or `--team` flag | Yes |
+| **Custom persistent** | Create via `/ocr:create-reviewer` | Yes |
+| **Ephemeral** | Describe inline via `--reviewer` at review time | No |
 
-You are a performance-focused code reviewer.
+**Create a custom reviewer** from your AI assistant:
 
-## Focus Areas
-- Response times and latency
-- Memory usage and leaks
-- Database query efficiency
-
-## Anti-Patterns to Flag
-- N+1 queries
-- Unbounded loops over large datasets
-- Missing database indexes
+```
+/ocr:create-reviewer api-design --focus "REST API design, backwards compatibility, versioning, error response consistency"
 ```
 
-Then use it in config (`default_team: { performance: 2, principal: 1 }`) or via natural language ("add 2 performance reviewers").
+This generates a reviewer file following the standard template, syncs metadata, and makes it available in the dashboard immediately.
+
+**Override your team per-review** with the `--team` flag:
+
+```
+/ocr:review --team principal:2,security:1,martin-fowler:1
+```
+
+### Famous Engineer Personas
+
+Review your code through the lens of industry legends. OCR includes personas for **Martin Fowler**, **Kent Beck**, **Sandi Metz**, **Rich Hickey**, **Kent Dodds**, **Anders Hejlsberg**, **John Ousterhout**, **Kamil Mysliwiec**, **Tanner Linsley**, and **Vladimir Khorikov** — each with review styles, philosophies, and focus areas reflecting their published work.
+
+<p align="center">
+  <img src="assets/ocr-tool-famous-engineer-reviewers.png" alt="Famous Engineer reviewer personas on the Team page" width="700" />
+</p>
+
+Add them to your team like any other reviewer:
+
+```yaml
+# .ocr/config.yaml
+default_team:
+  principal: 2
+  martin-fowler: 1
+  sandi-metz: 1
+```
+
+### Ephemeral Reviewers
+
+Need a one-off review perspective without creating a persistent reviewer? Describe it inline with `--reviewer`:
+
+```
+/ocr:review --reviewer "Focus on error handling in the auth flow"
+/ocr:review --team principal:2 --reviewer "Review as a junior developer would" --reviewer "Check accessibility compliance"
+```
+
+Ephemeral reviewers participate in all review phases (parallel reviews, discourse, synthesis) just like library reviewers. They don't persist to the reviewer library — they exist only for that review session.
 
 ### Real-Time Progress
 
@@ -357,10 +398,12 @@ context: |
 
 # Customize your reviewer team composition
 default_team:
-  principal: 2    # Architecture, design patterns
-  quality: 2      # Code style, best practices
-  # security: 1   # Auto-added for auth/data changes
-  # testing: 1    # Auto-added for logic changes
+  principal: 2       # Architecture, design patterns
+  quality: 2         # Code style, best practices
+  # security: 1      # Auto-added for auth/data changes
+  # testing: 1       # Auto-added for logic changes
+  # martin-fowler: 1 # Famous engineer persona
+  # sandi-metz: 1    # Famous engineer persona
 
 # Context discovery
 context_discovery:
@@ -391,7 +434,7 @@ dashboard:
   ide: auto  # vscode | cursor | windsurf | jetbrains | sublime
 ```
 
-Team composition can also be changed per-review via natural language: "use 3 principal reviewers and add security."
+Team composition can also be changed per-review via `--team` (explicit roster) or `--reviewer` (ephemeral reviewers), or via natural language: "use 3 principal reviewers and add security."
 
 ---
 
@@ -402,9 +445,13 @@ Team composition can also be changed per-review via natural language: "use 3 pri
 | Command | Description |
 |---------|-------------|
 | `/ocr-review [target]` | Review staged changes, commits, or branches |
+| `/ocr-review --team id:n,...` | Review with a custom team composition |
+| `/ocr-review --reviewer "..."` | Add an ephemeral reviewer by description |
 | `/ocr-review --fresh` | Clear session and start fresh |
 | `/ocr-map [target]` | Generate a Code Review Map for large changesets |
 | `/ocr-post` | Post review as a GitHub PR comment |
+| `/ocr-create-reviewer name --focus "..."` | Create a custom persistent reviewer |
+| `/ocr-sync-reviewers` | Sync reviewer metadata for the dashboard |
 | `/ocr-doctor` | Verify installation and dependencies |
 | `/ocr-reviewers` | List available reviewer personas |
 | `/ocr-history` | List past review sessions |
@@ -502,6 +549,9 @@ Reviews are persisted to `.ocr/sessions/{date}-{branch}/`:
 ├── rounds/
 │   ├── round-1/
 │   │   ├── reviews/         # Individual reviewer outputs
+│   │   │   ├── principal-1.md
+│   │   │   ├── quality-1.md
+│   │   │   └── ephemeral-1.md  # From --reviewer (if used)
 │   │   ├── discourse.md     # Cross-reviewer discussion
 │   │   └── final.md         # Synthesized final review
 │   └── round-2/             # Created on re-review

@@ -24,10 +24,16 @@ ocr dashboard --no-open        # Don't auto-open browser
 
 ## Features
 
-- **Command Center** — Launch reviews and Code Review Maps directly from the dashboard with live terminal output
+- **Command Center** — Launch reviews and Code Review Maps directly from the dashboard with live terminal output. Customize your reviewer team per-review, or add ephemeral reviewers by description with `--reviewer`.
 
 <p align="center">
   <img src="../../assets/ocr-tool-command-center.png" alt="OCR Dashboard Command Center" width="700" />
+</p>
+
+- **Team page** — Browse all 28 reviewer personas grouped by tier (Generalists, Specialists, Famous Engineers, Custom). View full prompts with focus areas and persona details. Create new reviewers or sync metadata directly from the dashboard.
+
+<p align="center">
+  <img src="../../assets/ocr-tool-famous-engineer-reviewers.png" alt="Famous Engineer reviewer personas on the Team page" width="700" />
 </p>
 
 - **Review detail** — Read individual reviewer findings, discourse, and final synthesis with rendered markdown
@@ -74,7 +80,7 @@ The review round page includes a "Post to GitHub" button that:
 ```
 src/
 ├── client/                   # React SPA
-│   ├── features/             # Feature modules (sessions, reviews, map, commands, notes, home)
+│   ├── features/             # Feature modules (sessions, reviews, map, commands, reviewers, notes, home)
 │   ├── components/           # Shared UI components (layout, markdown, status badges)
 │   ├── providers/            # React Query, Socket.IO, theme
 │   └── router.tsx            # React Router routes

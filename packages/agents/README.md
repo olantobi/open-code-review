@@ -43,10 +43,12 @@ agents/
 │   │   ├── discourse.md       # Multi-agent debate rules
 │   │   ├── final-template.md  # Final review template
 │   │   └── reviewers/         # Persona definitions (customizable)
-│   │       ├── principal.md   # Architecture, design patterns
-│   │       ├── quality.md     # Code style, best practices
-│   │       ├── security.md    # Auth, data handling, vulnerabilities
-│   │       └── testing.md     # Coverage, edge cases
+│   │       ├── principal.md     # Architecture, design patterns
+│   │       ├── quality.md       # Code style, best practices
+│   │       ├── security.md      # Auth, data handling, vulnerabilities
+│   │       ├── testing.md       # Coverage, edge cases
+│   │       ├── martin-fowler.md # Famous engineer persona
+│   │       └── ...              # 28 personas total
 │   └── assets/
 │       ├── config.yaml        # Default configuration
 │       └── reviewer-template.md
@@ -76,6 +78,8 @@ agents/
 | `history.md` | `/ocr-history` | `/ocr:history` |
 | `show.md` | `/ocr-show` | `/ocr:show` |
 | `address.md` | `/ocr-address` | `/ocr:address` |
+| `create-reviewer.md` | `/ocr-create-reviewer` | `/ocr:create-reviewer` |
+| `sync-reviewers.md` | `/ocr-sync-reviewers` | `/ocr:sync-reviewers` |
 | `translate-review-to-single-human.md` | `/ocr-translate-review-to-single-human` | `/ocr:translate-review-to-single-human` |
 
 **Why two formats?** Windsurf requires flat command files with a prefix (`/ocr-command`), while Claude Code and Cursor support subdirectories (`/ocr:command`). Both invoke the same underlying functionality.
@@ -92,13 +96,20 @@ The `SKILL.md` file defines the **Tech Lead** role — the orchestrator that:
 
 ### Reviewer Personas
 
-**Built-in** (customizable):
-- **Principal** — Architecture, design patterns, holistic review
-- **Quality** — Code style, readability, best practices
-- **Security** — Authentication, data handling, vulnerabilities
-- **Testing** — Coverage, edge cases, test strategy
+28 personas across four tiers:
 
-**Custom**: Create your own by adding files to `.ocr/skills/references/reviewers/`. See the [reviewer template](skills/ocr/assets/reviewer-template.md).
+| Tier | Personas |
+|------|----------|
+| **Generalists** | Principal, Quality, Fullstack, Staff Engineer, Architect |
+| **Specialists** | Security, Testing, Frontend, Backend, Performance, DevOps, Infrastructure, Reliability, Mobile, Data, DX, Docs Writer, Accessibility, AI |
+| **Famous Engineers** | Martin Fowler, Kent Beck, Sandi Metz, Rich Hickey, Kent Dodds, Anders Hejlsberg, John Ousterhout, Kamil Mysliwiec, Tanner Linsley, Vladimir Khorikov |
+| **Custom** | Your own domain-specific reviewers |
+
+Famous Engineer personas review through the lens of each engineer's published work and philosophy — e.g., Martin Fowler focuses on refactoring and domain modeling, Kent Beck on test-driven development, Sandi Metz on object-oriented design.
+
+**Create custom reviewers** via the `/ocr:create-reviewer` command or by adding `.md` files to `.ocr/skills/references/reviewers/`. See the [reviewer template](skills/ocr/assets/reviewer-template.md).
+
+**Ephemeral reviewers** can be added per-review with `--reviewer` — no persistence required. See the `review.md` command spec for details.
 
 ### Map Agent Personas
 
@@ -121,13 +132,17 @@ These run with configurable redundancy (default: 2). See `.ocr/config.yaml` → 
 └── rounds/
     ├── round-1/
     │   ├── reviews/         # Individual reviewer outputs
+    │   │   ├── principal-1.md
+    │   │   ├── quality-1.md
+    │   │   └── ephemeral-1.md  # From --reviewer (if used)
     │   ├── discourse.md     # Cross-reviewer discussion
     │   └── final.md         # Synthesized review
     └── round-2/             # Created on re-review
-├── maps/
-│   └── run-1/
-│       ├── map.md           # Code Review Map
-│       └── flow-analysis.md # Dependency graph (Mermaid)
+├── map/
+│   └── runs/
+│       └── run-1/
+│           ├── map.md           # Code Review Map
+│           └── flow-analysis.md # Dependency graph (Mermaid)
 ```
 
 Running `/ocr-review` again on an existing session creates a new round if the previous round is complete. See `references/session-files.md` for the complete file manifest.

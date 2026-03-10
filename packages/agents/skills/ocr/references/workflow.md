@@ -421,6 +421,21 @@ See `references/context-discovery.md` for detailed algorithm.
    | Logic changes | + 1x Testing (if not in config) |
    | User says "add security" | + 1x Security |
 
+5. **Handle `--team` override** (if provided):
+
+   If the user passed `--team reviewer-id:count,...`, use those reviewers **instead of** `default_team` from config. Parse the comma-separated list into reviewer IDs and counts.
+
+6. **Handle `--reviewer` ephemeral reviewers** (if provided):
+
+   Each `--reviewer "..."` value adds one ephemeral reviewer to the team. These are **in addition to** library reviewers (from `--team` or `default_team`).
+
+   For each `--reviewer` value:
+   - Synthesize a focused reviewer persona from the description (see below)
+   - Spawn with redundancy 1 (ephemeral reviewers are inherently unique)
+   - Output file: `ephemeral-{n}.md` (e.g., `ephemeral-1.md`, `ephemeral-2.md`)
+
+   **Synthesizing an ephemeral persona**: Use the description to create a focused reviewer identity. For example, `--reviewer "Focus on error handling in the auth flow"` becomes a reviewer whose persona is: "You are reviewing this code with a specific focus on error handling patterns in the authentication flow. Evaluate error propagation, edge cases, failure modes, and recovery paths." The persona should be specific enough to guide the review but broad enough to catch related issues.
+
 ---
 
 ## Phase 4: Spawn Reviewers
@@ -464,15 +479,29 @@ See `references/context-discovery.md` for detailed algorithm.
 
    Examples: `principal-1.md`, `principal-2.md`, `quality-1.md`, `quality-2.md`, `testing-1.md`
 
-3. Each task receives:
-   - Reviewer persona (from `references/reviewers/{name}.md`)
+3. **Spawn ephemeral reviewers** (if `--reviewer` was provided):
+
+   For each ephemeral reviewer, create a task with a synthesized persona (no `.md` file lookup). The task receives the same context as library reviewers but uses the synthesized persona instead of a file-based one.
+
+   ```bash
+   # From --reviewer "Focus on error handling"
+   -> Create: rounds/round-$CURRENT_ROUND/reviews/ephemeral-1.md
+
+   # From --reviewer "Review as a junior developer"
+   -> Create: rounds/round-$CURRENT_ROUND/reviews/ephemeral-2.md
+   ```
+
+   See `references/reviewer-task.md` for the ephemeral reviewer task variant.
+
+4. Each task receives:
+   - Reviewer persona (from `references/reviewers/{name}.md` for library reviewers, or synthesized for ephemeral)
    - Project context (from `discovered-standards.md`)
    - **Requirements context (from `requirements.md` if provided)**
    - Tech Lead guidance (including requirements assessment)
    - The diff to review
    - **Instruction to explore codebase with full agency**
 
-4. Save each review to `.ocr/sessions/{id}/rounds/round-{current_round}/reviews/{type}-{n}.md`.
+5. Save each review to `.ocr/sessions/{id}/rounds/round-{current_round}/reviews/{type}-{n}.md`.
 
 See `references/reviewer-task.md` for the task template.
 
@@ -489,12 +518,12 @@ REVIEWS_DIR="$SESSION_DIR/rounds/round-$CURRENT_ROUND/reviews"
 echo "Validating: $REVIEWS_DIR"
 ls -la "$REVIEWS_DIR/"
 
-# Verify all files match {type}-{n}.md pattern (principal, quality, security, testing)
+# Verify all files match {slug}-{n}.md pattern
 for f in "$REVIEWS_DIR/"*.md; do
-  if [[ "$(basename "$f")" =~ ^(principal|quality|security|testing)-[0-9]+\.md$ ]]; then
+  if [[ "$(basename "$f")" =~ ^[a-z][a-z0-9-]*-[0-9]+\.md$ ]]; then
     echo "OK $(basename "$f")"
   else
-    echo "FAIL $(basename "$f") does not match {type}-{n}.md pattern"
+    echo "FAIL $(basename "$f") does not match {slug}-{n}.md pattern"
     exit 1
   fi
 done

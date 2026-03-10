@@ -30,6 +30,7 @@ Every OCR session creates files in `.ocr/sessions/{session-id}/`:
     │   │   ├── quality-2.md
     │   │   ├── security-1.md   # (if security reviewer assigned)
     │   │   ├── testing-1.md    # (if testing reviewer assigned)
+    │   │   ├── ephemeral-1.md  # (if --reviewer flag used)
     │   │   └── {type}-{n}.md   # (additional assigned custom reviewers)
     │   ├── discourse.md    # Cross-reviewer discussion for round 1
     │   ├── round-meta.json # Structured review data (written by CLI via round-complete --stdin)
@@ -114,7 +115,7 @@ OCR uses a **run-based architecture** for maps, parallel to review rounds.
 
 **Pattern**: `{type}-{n}.md`
 
-- `{type}`: One of `principal`, `quality`, `security`, `testing`, or custom reviewer name
+- `{type}`: One of `principal`, `quality`, `security`, `testing`, `ephemeral`, or custom reviewer name
 - `{n}`: Sequential number starting at 1
 
 **Examples** (for round 1):
@@ -126,6 +127,8 @@ rounds/round-1/reviews/quality-2.md
 rounds/round-1/reviews/security-1.md
 rounds/round-1/reviews/testing-1.md
 rounds/round-1/reviews/performance-1.md   # Custom reviewer
+rounds/round-1/reviews/ephemeral-1.md     # Ephemeral reviewer (from --reviewer)
+rounds/round-1/reviews/ephemeral-2.md     # Ephemeral reviewer (from --reviewer)
 ```
 
 **Rules**:
@@ -133,6 +136,8 @@ rounds/round-1/reviews/performance-1.md   # Custom reviewer
 - Use hyphens, not underscores
 - Instance numbers are sequential per reviewer type
 - Custom reviewers follow the same `{type}-{n}.md` pattern
+- Ephemeral reviewers (from `--reviewer`) use the `ephemeral-{n}` pattern
+- Ephemeral reviewers are NOT persisted to `reviewers-meta.json` or the reviewers directory
 
 ## Phase-to-File Mapping
 

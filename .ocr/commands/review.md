@@ -7,12 +7,14 @@ tags: [ocr, review, code-review]
 
 **Usage**
 ```
-/ocr-review [target] [--fresh]
+/ocr-review [target] [--fresh] [--team <ids>] [--reviewer "<description>"]
 ```
 
 **Arguments**
 - `target` (optional): Branch, commit, or file to review. Defaults to staged changes.
 - `--fresh` (optional): Clear any existing session for today's date and start from scratch.
+- `--team` (optional): Override the default reviewer team. Format: `reviewer-id:count,reviewer-id:count`. Example: `--team principal:2,martin-fowler:1`.
+- `--reviewer` (optional, repeatable): Add an ephemeral reviewer described in natural language. The Tech Lead will synthesize a focused reviewer persona from the description. Does not persist. Example: `--reviewer "Focus on error handling in the auth flow"`.
 
 **Examples**
 ```
@@ -21,6 +23,9 @@ tags: [ocr, review, code-review]
 /ocr-review HEAD~3             # Review last 3 commits
 /ocr-review feature/auth       # Review branch vs main
 /ocr-review src/api/           # Review specific directory
+/ocr-review --team principal:2,security:1   # Custom team composition
+/ocr-review --reviewer "Review as a junior developer would"
+/ocr-review --team principal:1 --reviewer "Focus on error handling" --reviewer "Check accessibility"
 ```
 
 **Steps**

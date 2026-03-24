@@ -1,3 +1,20 @@
+## 1.9.0 (2026-03-24)
+
+### 🚀 Features
+
+- **agents:** add Nx VersionActions to sync plugin.json on release ([#16](https://github.com/spencermarx/open-code-review/issues/16))
+
+### 🩹 Fixes
+
+- **agents:** install @nx/devkit and use proper imports in version-actions ([39d9072](https://github.com/spencermarx/open-code-review/commit/39d9072))
+- **agents:** resolve TS errors in version-actions by using nx imports ([3a01b5e](https://github.com/spencermarx/open-code-review/commit/3a01b5e))
+- **agents:** update plugin.json and SKILL.md versions to 1.8.4 ([#16](https://github.com/spencermarx/open-code-review/issues/16))
+
+### ❤️ Thank You
+
+- claude-flow @agentic-org
+- Spencer Marx
+
 ## 1.8.4 (2026-03-10)
 
 ### 🚀 Features

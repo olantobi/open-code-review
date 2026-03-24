@@ -21,12 +21,41 @@ import type { FinalConfigForProject } from 'nx/src/command-line/release/utils/re
  *   - JsVersionActions class and afterAllProjectsVersioned (delegation target)
  *
  * If Nx restructures these paths in a future release, update the import paths
- * accordingly. The dynamic import of JsVersionActions is wrapped in try/catch
- * to surface a clear error message if this happens.
+ * accordingly. All internal-path imports are wrapped in try/catch to surface
+ * clear error messages if resolution fails.
  */
 
-// Re-export afterAllProjectsVersioned from @nx/js so lock-file updates still work
-export { afterAllProjectsVersioned } from '@nx/js/src/release/version-actions';
+/**
+ * Regex pattern for matching a double-quoted version in YAML frontmatter.
+ * Exported so tests can import the same pattern (single source of truth).
+ *
+ * Only matches double-quoted values (e.g. `version: "1.0.0"`).
+ * Unquoted or single-quoted values are intentionally not matched.
+ */
+export const SKILL_VERSION_REGEX = /^(\s*version:\s*)"[^"]*"/m;
+
+/**
+ * Lazily loads and caches the `afterAllProjectsVersioned` export from @nx/js.
+ * Uses dynamic import so a path change in @nx/js produces a descriptive error
+ * instead of a hard module-resolution crash at load time.
+ */
+let _afterAllProjectsVersioned: ((...args: any[]) => any) | undefined;
+
+export const afterAllProjectsVersioned = async (...args: any[]) => {
+  if (!_afterAllProjectsVersioned) {
+    try {
+      const mod = await import('@nx/js/src/release/version-actions');
+      _afterAllProjectsVersioned = mod.afterAllProjectsVersioned;
+    } catch {
+      throw new Error(
+        'Failed to load afterAllProjectsVersioned from @nx/js/src/release/version-actions. ' +
+        'This is an internal Nx path validated against Nx 22.x. ' +
+        'If you have upgraded Nx, the path may have changed — check the Nx changelog.',
+      );
+    }
+  }
+  return _afterAllProjectsVersioned(...args);
+};
 
 // Type alias for the delegate — avoids importing the class at the module level
 type JsVersionActionsInstance = VersionActions & {
@@ -36,8 +65,13 @@ type JsVersionActionsInstance = VersionActions & {
 /**
  * Custom Nx VersionActions for the agents package.
  *
- * Delegates to @nx/js's JsVersionActions for standard package.json operations,
- * then extends `updateProjectVersion` to also sync the version into:
+ * Uses `implements VersionActions` with delegation to @nx/js's JsVersionActions
+ * rather than `extends`, because JsVersionActions is loaded via dynamic import
+ * (it lives behind an internal Nx path). `extends` would require a statically
+ * available base class at module evaluation time, which is incompatible with
+ * the lazy-loading + try/catch error handling strategy for internal imports.
+ *
+ * Overrides `updateProjectVersion` to also sync the version into:
  *   - .claude-plugin/plugin.json  (Claude Code plugin manifest)
  *   - skills/ocr/SKILL.md         (skill frontmatter metadata)
  *
@@ -68,12 +102,21 @@ export default class AgentsVersionActions implements VersionActions {
     if (!this.jsActions) {
       try {
         const { default: JsVersionActions } = await import('@nx/js/src/release/version-actions');
-        this.jsActions = new JsVersionActions(
+        const instance = new JsVersionActions(
           this.releaseGroup,
           this.projectGraphNode,
           this.finalConfigForProject,
-        ) as JsVersionActionsInstance;
-      } catch {
+        );
+        if (!('manifestsToUpdate' in instance)) {
+          throw new Error(
+            'JsVersionActions missing manifestsToUpdate — Nx API may have changed',
+          );
+        }
+        this.jsActions = instance as JsVersionActionsInstance;
+      } catch (err) {
+        if (err instanceof Error && err.message.includes('manifestsToUpdate')) {
+          throw err;
+        }
         throw new Error(
           'Failed to load @nx/js/src/release/version-actions. ' +
           'This is an internal Nx path validated against Nx 22.x. ' +
@@ -162,19 +205,20 @@ export default class AgentsVersionActions implements VersionActions {
     if (tree.exists(skillMdPath)) {
       const content = tree.read(skillMdPath, 'utf-8');
       if (content == null) {
-        logMessages.push(`⚠️  WARNING: could not read ${skillMdPath}`);
-        return logMessages;
+        throw new Error(
+          `Failed to read ${skillMdPath} — file exists but returned null`,
+        );
       }
-      const updated = content.replace(
-        /^(\s*version:\s*)"[^"]*"/m,
-        `$1"${newVersion}"`,
-      );
+      const updated = content.replace(SKILL_VERSION_REGEX, `$1"${newVersion}"`);
       if (updated === content) {
-        logMessages.push(`⚠️  WARNING: version pattern not found in ${skillMdPath}`);
-      } else {
-        tree.write(skillMdPath, updated);
-        logMessages.push(`✍️  New version ${newVersion} written to ${skillMdPath}`);
+        throw new Error(
+          `Version pattern not found in ${skillMdPath}. ` +
+          'The version field must use double quotes (e.g. version: "1.0.0"). ' +
+          'Check that the SKILL.md frontmatter has not been reformatted.',
+        );
       }
+      tree.write(skillMdPath, updated);
+      logMessages.push(`✍️  New version ${newVersion} written to ${skillMdPath}`);
     }
 
     return logMessages;

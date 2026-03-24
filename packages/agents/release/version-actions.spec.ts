@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
+import { SKILL_VERSION_REGEX } from './version-actions';
 
-// Test the sync logic extracted from updateProjectVersion.
-// We test the JSON update and regex replacement logic directly
-// rather than importing the full class (which requires Nx runtime).
+// Tests use the exported SKILL_VERSION_REGEX constant — single source of truth
+// shared between the class and these tests. If the regex changes in
+// version-actions.ts, these tests automatically pick up the new pattern.
 
 describe('version-actions sync logic', () => {
   describe('plugin.json version sync', () => {
@@ -23,7 +24,6 @@ describe('version-actions sync logic', () => {
       const updated = JSON.stringify(parsed, null, 2) + '\n';
 
       expect(JSON.parse(updated).version).toBe('2.0.0');
-      // Ensure other fields are preserved
       expect(JSON.parse(updated).name).toBe('ocr');
       expect(JSON.parse(updated).description).toBe('Test plugin');
     });
@@ -44,24 +44,21 @@ metadata:
 # Open Code Review
 `;
 
-    const versionRegex = /^(\s*version:\s*)"[^"]*"/m;
-
     it('updates the version in YAML frontmatter', () => {
-      const updated = skillContent.replace(versionRegex, `$1"2.0.0"`);
+      const updated = skillContent.replace(SKILL_VERSION_REGEX, `$1"2.0.0"`);
       expect(updated).toContain('version: "2.0.0"');
       expect(updated).not.toContain('version: "1.0.0"');
     });
 
     it('preserves surrounding content', () => {
-      const updated = skillContent.replace(versionRegex, `$1"2.0.0"`);
+      const updated = skillContent.replace(SKILL_VERSION_REGEX, `$1"2.0.0"`);
       expect(updated).toContain('name: ocr');
       expect(updated).toContain('author: spencermarx');
       expect(updated).toContain('# Open Code Review');
     });
 
     it('preserves indentation', () => {
-      const updated = skillContent.replace(versionRegex, `$1"2.0.0"`);
-      // The version line should maintain its original indentation
+      const updated = skillContent.replace(SKILL_VERSION_REGEX, `$1"2.0.0"`);
       expect(updated).toMatch(/^\s{2}version: "2.0.0"/m);
     });
 
@@ -72,8 +69,8 @@ metadata:
   author: spencermarx
 ---
 `;
-      const updated = noVersionContent.replace(versionRegex, `$1"2.0.0"`);
-      expect(updated).toBe(noVersionContent); // No change = no match
+      const updated = noVersionContent.replace(SKILL_VERSION_REGEX, `$1"2.0.0"`);
+      expect(updated).toBe(noVersionContent);
     });
 
     it('detects unquoted version as no-op', () => {
@@ -82,8 +79,8 @@ metadata:
   version: 1.0.0
 ---
 `;
-      const updated = unquotedContent.replace(versionRegex, `$1"2.0.0"`);
-      expect(updated).toBe(unquotedContent); // Unquoted doesn't match
+      const updated = unquotedContent.replace(SKILL_VERSION_REGEX, `$1"2.0.0"`);
+      expect(updated).toBe(unquotedContent);
     });
 
     it('handles single-quoted version as no-op', () => {
@@ -93,10 +90,10 @@ metadata:
 ---
 `;
       const updated = singleQuotedContent.replace(
-        versionRegex,
+        SKILL_VERSION_REGEX,
         `$1"2.0.0"`,
       );
-      expect(updated).toBe(singleQuotedContent); // Single quotes don't match
+      expect(updated).toBe(singleQuotedContent);
     });
   });
 });

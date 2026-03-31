@@ -1,3 +1,14 @@
+## 1.10.0 (2026-03-31)
+
+### 🚀 Features
+
+- **cli:** add JSONL-backed command history backup with replay recovery ([424007a](https://github.com/spencermarx/open-code-review/commit/424007a))
+
+### ❤️ Thank You
+
+- claude-flow @agentic-org
+- Spencer Marx
+
 ## 1.9.0 (2026-03-24)
 
 ### 🩹 Fixes

@@ -1,3 +1,21 @@
+## 1.10.0 (2026-03-31)
+
+### 🚀 Features
+
+- **cli:** add JSONL-backed command history backup with replay recovery ([424007a](https://github.com/spencermarx/open-code-review/commit/424007a))
+- **dashboard:** integrate JSONL backup, port auto-retry, and Vite port discovery ([ba292e2](https://github.com/spencermarx/open-code-review/commit/ba292e2))
+
+### 🩹 Fixes
+
+- **dashboard:** accept any localhost origin in dev CORS ([b5b9ec7](https://github.com/spencermarx/open-code-review/commit/b5b9ec7))
+- **dashboard:** extend CORS to 127.0.0.1 and document origin handling ([576c0f7](https://github.com/spencermarx/open-code-review/commit/576c0f7))
+- **dashboard:** use 127.0.0.1 in Vite proxy targets for IPv4 match ([a1d9c39](https://github.com/spencermarx/open-code-review/commit/a1d9c39))
+
+### ❤️ Thank You
+
+- claude-flow @agentic-org
+- Spencer Marx
+
 ## 1.9.0 (2026-03-24)
 
 ### 🚀 Features

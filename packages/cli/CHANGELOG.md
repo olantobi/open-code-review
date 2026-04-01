@@ -1,3 +1,14 @@
+## 1.10.1 (2026-04-01)
+
+### 🩹 Fixes
+
+- **cli,dashboard:** skip empty sessions and default backfilled status to closed ([1210b5f](https://github.com/spencermarx/open-code-review/commit/1210b5f))
+
+### ❤️ Thank You
+
+- claude-flow @agentic-org
+- Spencer Marx
+
 ## 1.10.0 (2026-03-31)
 
 ### 🚀 Features

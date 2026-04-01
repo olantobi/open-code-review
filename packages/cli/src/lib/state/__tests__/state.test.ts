@@ -468,6 +468,32 @@ describe("stateSync", () => {
     expect(result?.session.status).toBe("closed");
   });
 
+  it("infers 'complete' phase when final.md exists", async () => {
+    const dir = join(sessionsDir, "2026-03-04-feat-complete");
+    const roundDir = join(dir, "rounds", "round-1");
+    mkdirSync(roundDir, { recursive: true });
+    writeFileSync(join(roundDir, "final.md"), "# Final Review\n");
+
+    await stateSync(ocrDir);
+
+    const result = await stateShow(ocrDir, "2026-03-04-feat-complete");
+    expect(result?.session.current_phase).toBe("complete");
+    expect(result?.session.status).toBe("closed");
+  });
+
+  it("defaults to 'context' phase when no final.md exists", async () => {
+    const dir = join(sessionsDir, "2026-03-04-feat-incomplete");
+    const reviewsDir = join(dir, "rounds", "round-1", "reviews");
+    mkdirSync(reviewsDir, { recursive: true });
+    writeFileSync(join(reviewsDir, "principal-1.md"), "# Review\n");
+
+    await stateSync(ocrDir);
+
+    const result = await stateShow(ocrDir, "2026-03-04-feat-incomplete");
+    expect(result?.session.current_phase).toBe("context");
+    expect(result?.session.status).toBe("closed");
+  });
+
   it("skips sessions that already exist in SQLite", async () => {
     const dir = sessionDir("already-exists");
     await stateInit({

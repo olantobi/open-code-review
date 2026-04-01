@@ -781,7 +781,7 @@ export async function stateSync(ocrDir: string): Promise<number> {
       if (existsSync(roundsDir)) {
         const roundDirs = readdirSync(roundsDir)
           .filter((d) => /^round-\d+$/.test(d))
-          .sort((a, b) => parseInt(a.split("-")[1]!) - parseInt(b.split("-")[1]!));
+          .sort((a, b) => parseInt(a.replace(/^\D+-/, ""), 10) - parseInt(b.replace(/^\D+-/, ""), 10));
         const latestRound = roundDirs[roundDirs.length - 1];
         if (latestRound && existsSync(join(roundsDir, latestRound, "final.md"))) {
           inferredPhase = "complete";
@@ -792,7 +792,7 @@ export async function stateSync(ocrDir: string): Promise<number> {
       if (existsSync(runsDir)) {
         const runDirs = readdirSync(runsDir)
           .filter((d) => /^run-\d+$/.test(d))
-          .sort((a, b) => parseInt(a.split("-")[1]!) - parseInt(b.split("-")[1]!));
+          .sort((a, b) => parseInt(a.replace(/^\D+-/, ""), 10) - parseInt(b.replace(/^\D+-/, ""), 10));
         const latestRun = runDirs[runDirs.length - 1];
         if (latestRun && existsSync(join(runsDir, latestRun, "map.md"))) {
           inferredPhase = "complete";

@@ -66,6 +66,18 @@ describe('FilesystemSync', () => {
       expect(session?.['workflow_type']).toBe('review')
     })
 
+    it('skips empty session directories with no artifacts', async () => {
+      const sessionId = '2026-01-01-empty-ghost'
+      const sessionDir = join(sessionsDir, sessionId)
+      mkdirSync(join(sessionDir, 'rounds', 'round-1', 'reviews'), { recursive: true })
+
+      const sync = new FilesystemSync(db, sessionsDir)
+      await sync.fullScan()
+
+      const session = queryOne(db, 'SELECT * FROM sessions WHERE id = ?', [sessionId])
+      expect(session).toBeUndefined()
+    })
+
     it('parses reviewer outputs into findings', async () => {
       const sessionId = '2026-01-01-feature'
       const sessionDir = join(sessionsDir, sessionId)

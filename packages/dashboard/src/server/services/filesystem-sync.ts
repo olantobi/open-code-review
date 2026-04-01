@@ -309,21 +309,18 @@ export class FilesystemSync {
 
   // ── Artifact Check ──
 
-  /** Returns true if the session directory contains at least one .md or .json file. */
-  private hasArtifacts(sessionDir: string): boolean {
-    const check = (dir: string): boolean => {
-      try {
-        for (const entry of readdirSync(dir, { withFileTypes: true })) {
-          if (entry.isDirectory()) {
-            if (check(join(dir, entry.name))) return true
-          } else if (/\.(md|json)$/.test(entry.name)) {
-            return true
-          }
+  /** Returns true if the directory contains at least one .md or .json file (recursively). */
+  private hasArtifacts(dir: string): boolean {
+    try {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        if (entry.isDirectory()) {
+          if (this.hasArtifacts(join(dir, entry.name))) return true
+        } else if (/\.(md|json)$/.test(entry.name)) {
+          return true
         }
-      } catch { /* permission error — treat as empty */ }
-      return false
-    }
-    return check(sessionDir)
+      }
+    } catch { /* permission error — treat as empty */ }
+    return false
   }
 
   // ── Mtime Skip Check ──

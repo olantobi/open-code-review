@@ -40,7 +40,8 @@
   "release": {
     "projects": [
       "packages/*",
-      "!packages/dashboard"
+      "!packages/dashboard",
+      "!packages/shared/*"
     ],
     "version": {
       "conventionalCommits": true

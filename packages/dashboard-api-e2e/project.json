@@ -6,10 +6,11 @@
   "tags": ["scope:dashboard", "type:e2e", "test:api"],
   "targets": {
     "e2e": {
-      "executor": "@nx/vitest:test",
+      "executor": "nx:run-commands",
       "dependsOn": ["cli:build"],
       "options": {
-        "config": "packages/dashboard-api-e2e/vitest.config.ts"
+        "command": "vitest run --config packages/dashboard-api-e2e/vitest.config.ts",
+        "cwd": "{workspaceRoot}"
       }
     }
   }

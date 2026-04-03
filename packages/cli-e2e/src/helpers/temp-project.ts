@@ -30,6 +30,9 @@ export function createTempProject(): TempProject {
 
   // Initialize git repo — many commands require this
   execFileSync("git", ["init"], { cwd: dir, stdio: "ignore" });
+  // Set identity for the temp repo (CI runners don't have global git config)
+  execFileSync("git", ["config", "user.email", "test@ocr.dev"], { cwd: dir, stdio: "ignore" });
+  execFileSync("git", ["config", "user.name", "OCR Test"], { cwd: dir, stdio: "ignore" });
   execFileSync("git", ["commit", "--allow-empty", "-m", "init"], {
     cwd: dir,
     stdio: "ignore",

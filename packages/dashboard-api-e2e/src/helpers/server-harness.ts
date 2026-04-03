@@ -46,6 +46,8 @@ export async function startTestServer(opts?: StartOptions): Promise<ServerInstan
 
   // Set up minimal project structure
   execFileSync("git", ["init"], { cwd: tmpDir, stdio: "ignore" });
+  execFileSync("git", ["config", "user.email", "test@ocr.dev"], { cwd: tmpDir, stdio: "ignore" });
+  execFileSync("git", ["config", "user.name", "OCR Test"], { cwd: tmpDir, stdio: "ignore" });
   execFileSync("git", ["commit", "--allow-empty", "-m", "init"], {
     cwd: tmpDir,
     stdio: "ignore",
@@ -118,6 +120,8 @@ export function startServerEarly(opts?: StartOptions): {
   );
 
   execFileSync("git", ["init"], { cwd: tmpDir, stdio: "ignore" });
+  execFileSync("git", ["config", "user.email", "test@ocr.dev"], { cwd: tmpDir, stdio: "ignore" });
+  execFileSync("git", ["config", "user.name", "OCR Test"], { cwd: tmpDir, stdio: "ignore" });
   execFileSync("git", ["commit", "--allow-empty", "-m", "init"], {
     cwd: tmpDir,
     stdio: "ignore",

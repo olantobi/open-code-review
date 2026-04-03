@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "concurrently -n server,client -c blue,green \"pnpm dev:server\" \"sleep 2 && pnpm dev:client\"",
+    "dev": "tsx scripts/dev.ts",
     "dev:client": "vite",
     "dev:server": "tsx watch src/server/index.ts",
     "build": "pnpm build:client && pnpm build:server",
@@ -36,13 +36,13 @@
   },
   "devDependencies": {
     "@open-code-review/cli": "workspace:*",
+    "@open-code-review/platform": "workspace:*",
     "@tailwindcss/vite": "^4.2.1",
     "@types/express": "^5.0.6",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@types/sql.js": "^1.4.9",
     "@vitejs/plugin-react": "^5.1.4",
-    "concurrently": "^9.2.1",
     "esbuild": "^0.24",
     "tailwindcss": "^4",
     "tsx": "^4.19.0",

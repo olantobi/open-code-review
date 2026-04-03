@@ -1,0 +1,16 @@
+{
+  "name": "platform",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/shared/platform/src",
+  "projectType": "library",
+  "tags": ["scope:shared", "type:util"],
+  "targets": {
+    "test": {
+      "executor": "@nx/vitest:test",
+      "outputs": ["{workspaceRoot}/coverage/packages/shared/platform"],
+      "options": {
+        "config": "packages/shared/platform/vitest.config.ts"
+      }
+    }
+  }
+}

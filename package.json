@@ -19,7 +19,10 @@
     "test": "nx run-many -t test",
     "test:cli": "nx test cli",
     "lint": "nx run-many -t lint",
-    "lint:cli": "nx lint cli"
+    "lint:cli": "nx lint cli",
+    "e2e": "nx run-many -t e2e",
+    "e2e:cli": "nx e2e cli-e2e",
+    "e2e:dashboard": "nx e2e dashboard-e2e"
   },
   "devDependencies": {
     "@nx/devkit": "^22.0.0",

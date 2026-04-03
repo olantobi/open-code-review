@@ -31,6 +31,13 @@
       ],
       "cache": true
     },
+    "e2e": {
+      "inputs": [
+        "default",
+        "^production"
+      ],
+      "cache": false
+    },
     "nx-release-publish": {
       "dependsOn": [
         "build"
@@ -41,7 +48,8 @@
     "projects": [
       "packages/*",
       "!packages/dashboard",
-      "!packages/shared/*"
+      "!packages/shared/*",
+      "!packages/*-e2e"
     ],
     "version": {
       "conventionalCommits": true

@@ -7,6 +7,7 @@
 
 import { execFile } from "node:child_process";
 import { resolve } from "node:path";
+import { existsSync } from "node:fs";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
@@ -16,10 +17,28 @@ const CLI_BIN = resolve(
   "../../../../packages/cli/dist/index.js",
 );
 
+if (!existsSync(CLI_BIN)) {
+  throw new Error(
+    `CLI binary not found at ${CLI_BIN}. Run "pnpm nx build cli" first.`,
+  );
+}
+
 export interface CliResult {
   stdout: string;
   stderr: string;
   exitCode: number;
+}
+
+export class CliTimeoutError extends Error {
+  constructor(
+    public readonly args: string[],
+    public readonly timeoutMs: number,
+  ) {
+    super(
+      `CLI timed out after ${timeoutMs}ms running: ocr ${args.join(" ")}`,
+    );
+    this.name = "CliTimeoutError";
+  }
 }
 
 export async function spawnCli(
@@ -38,11 +57,21 @@ export async function spawnCli(
     );
     return { stdout, stderr, exitCode: 0 };
   } catch (err: unknown) {
-    const e = err as { stdout?: string; stderr?: string; code?: number };
+    const e = err as {
+      stdout?: string;
+      stderr?: string;
+      code?: number | string;
+      killed?: boolean;
+    };
+
+    if (e.killed) {
+      throw new CliTimeoutError(args, options?.timeout ?? 30_000);
+    }
+
     return {
       stdout: e.stdout ?? "",
       stderr: e.stderr ?? "",
-      exitCode: e.code ?? 1,
+      exitCode: typeof e.code === "number" ? e.code : 1,
     };
   }
 }

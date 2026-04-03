@@ -15,10 +15,10 @@ import { resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
 
-export interface TempProject {
+export type TempProject = {
   dir: string;
   cleanup: () => void;
-}
+};
 
 /**
  * Create a temp directory with a git repo (required by most OCR commands).

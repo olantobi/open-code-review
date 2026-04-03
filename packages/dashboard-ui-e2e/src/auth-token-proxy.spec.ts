@@ -42,8 +42,13 @@ test.describe("auth proxy", () => {
 
     await page.goto("/");
 
-    // Give the app a moment to complete its auth flow
-    await page.waitForTimeout(2_000);
+    // Wait for the app to complete its auth flow
+    await page.waitForFunction(() => window.__OCR_TOKEN__ !== undefined, {
+      timeout: 10_000,
+    }).catch(() => {
+      // Fall back to networkidle if the global is never set
+    });
+    await page.waitForLoadState("networkidle");
 
     const syntaxErrors = consoleErrors.filter((e) =>
       e.includes("SyntaxError"),

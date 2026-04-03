@@ -93,7 +93,11 @@ importers:
         specifier: ^1.4.9
         version: 1.4.9
 
-  packages/cli-e2e: {}
+  packages/cli-e2e:
+    devDependencies:
+      '@open-code-review/cli':
+        specifier: workspace:*
+        version: link:../cli
 
   packages/dashboard:
     dependencies:
@@ -201,15 +205,23 @@ importers:
         specifier: ^3
         version: 3.2.4(@types/debug@4.1.12)(@types/node@22.19.7)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0)(yaml@2.8.2)
 
-  packages/dashboard-api-e2e: {}
-
-  packages/dashboard-e2e:
+  packages/dashboard-api-e2e:
     devDependencies:
-      vite:
-        specifier: ^6
-        version: 6.4.1(@types/node@22.19.7)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0)(yaml@2.8.2)
+      '@open-code-review/cli':
+        specifier: workspace:*
+        version: link:../cli
+      '@open-code-review/dashboard':
+        specifier: workspace:*
+        version: link:../dashboard
 
-  packages/dashboard-ui-e2e: {}
+  packages/dashboard-ui-e2e:
+    devDependencies:
+      '@open-code-review/cli':
+        specifier: workspace:*
+        version: link:../cli
+      '@open-code-review/dashboard':
+        specifier: workspace:*
+        version: link:../dashboard
 
   packages/shared/platform: {}
 

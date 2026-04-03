@@ -84,8 +84,8 @@ describe("CLI smoke tests", () => {
 
       const result = await spawnCli(["state", "show"], { cwd: project.dir });
 
-      // state show should not crash — exit 0 or output state info
       expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain("No active session");
     });
   });
 

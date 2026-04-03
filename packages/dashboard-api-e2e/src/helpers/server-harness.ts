@@ -72,7 +72,7 @@ export async function startTestServer(opts?: StartOptions): Promise<ServerInstan
       NODE_ENV: "test",
       NO_COLOR: "1",
     },
-    stdio: "pipe",
+    stdio: "ignore",
   });
 
   const baseUrl = `http://127.0.0.1:${port}`;
@@ -144,7 +144,7 @@ export function startServerEarly(opts?: StartOptions): {
       NODE_ENV: "test",
       NO_COLOR: "1",
     },
-    stdio: "pipe",
+    stdio: "ignore",
   });
 
   const baseUrl = `http://127.0.0.1:${port}`;

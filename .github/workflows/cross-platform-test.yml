@@ -49,6 +49,7 @@ jobs:
 
       - name: Debug Session (SSH)
         if: ${{ inputs.debug }}
+        timeout-minutes: 15
         uses: mxschmitt/action-tmate@v3
         with:
           limit-access-to-actor: true

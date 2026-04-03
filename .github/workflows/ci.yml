@@ -49,6 +49,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm nx e2e cli-e2e
       - run: pnpm nx e2e dashboard-api-e2e
+
   e2e-ui:
     name: UI E2E (Playwright)
     needs: [test]
@@ -69,3 +70,10 @@ jobs:
           git config user.name "OCR CI"
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm nx e2e dashboard-ui-e2e
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: dist/.playwright/
+          retention-days: 7

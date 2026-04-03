@@ -9,12 +9,17 @@
 
 import { pathToFileURL } from "node:url";
 import {
+  execFile,
   execFileSync,
   spawn,
+  type ExecFileOptions,
   type SpawnOptions,
   type ExecFileSyncOptions,
   type ChildProcess,
 } from "node:child_process";
+import { promisify } from "node:util";
+
+const execFilePromise = promisify(execFile);
 
 const isWindows = process.platform === "win32";
 
@@ -41,12 +46,29 @@ export async function importModule<T = Record<string, unknown>>(
 export function execBinary(
   binary: string,
   args: string[],
-  opts?: ExecFileSyncOptions,
+  opts: ExecFileSyncOptions & { encoding: BufferEncoding },
 ): string {
   return execFileSync(binary, args, {
     ...opts,
     shell: isWindows,
   }) as string;
+}
+
+/**
+ * Execute a binary asynchronously with cross-platform .cmd/.bat support.
+ *
+ * Async counterpart of `execBinary`. On Windows, npm-installed binaries are
+ * `.cmd` shims that require a shell to execute.
+ */
+export async function execBinaryAsync(
+  binary: string,
+  args: string[],
+  opts: ExecFileOptions & { encoding: BufferEncoding },
+): Promise<{ stdout: string; stderr: string }> {
+  return execFilePromise(binary, args, {
+    ...opts,
+    shell: isWindows,
+  }) as Promise<{ stdout: string; stderr: string }>;
 }
 
 /**

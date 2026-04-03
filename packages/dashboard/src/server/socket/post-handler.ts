@@ -6,21 +6,19 @@
  * PR comments via gh CLI.
  */
 
-import { execFile, type ChildProcess } from 'node:child_process'
+import type { ChildProcess } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, dirname, isAbsolute } from 'node:path'
 import { randomUUID } from 'node:crypto'
-import { promisify } from 'node:util'
 import type { Server as SocketIOServer, Socket } from 'socket.io'
 import type { Database } from 'sql.js'
+import { execBinaryAsync } from '@open-code-review/platform'
 import { getSession, saveDb } from '../db.js'
 import { cleanEnv } from './env.js'
 import { resolveLocalCli } from './cli-resolver.js'
 import { AiCliService, formatToolDetail, type NormalizedEvent } from '../services/ai-cli/index.js'
 import { startTrackedExecution } from './execution-tracker.js'
-
-const execFileAsync = promisify(execFile)
 
 /** Resolve session_dir to an absolute path. CLI stores relative paths (`.ocr/sessions/...`). */
 function resolveSessionDir(sessionDir: string, ocrDir: string): string {
@@ -59,10 +57,10 @@ async function findPrForBranch(
 
   for (const candidate of candidates) {
     try {
-      const { stdout } = await execFileAsync(
+      const { stdout } = await execBinaryAsync(
         'gh',
         ['pr', 'list', '--head', candidate, '--json', 'number,url', '--limit', '1'],
-        { env, cwd },
+        { env, cwd, encoding: 'utf-8' },
       )
       const prs = JSON.parse(stdout) as { number: number; url: string }[]
       if (prs.length > 0 && prs[0]) {
@@ -122,7 +120,7 @@ export function registerPostHandlers(
       // Check gh auth
       const repoRoot = dirname(ocrDir)
       try {
-        await execFileAsync('gh', ['auth', 'status'], { env: cleanEnv(), cwd: repoRoot })
+        await execBinaryAsync('gh', ['auth', 'status'], { env: cleanEnv(), cwd: repoRoot, encoding: 'utf-8' })
       } catch {
         socket.emit('post:gh-result', {
           authenticated: false,
@@ -488,10 +486,10 @@ export function registerPostHandlers(
 
         const repoRoot = dirname(ocrDir)
         try {
-          const { stdout } = await execFileAsync(
+          const { stdout } = await execBinaryAsync(
             'gh',
             ['pr', 'comment', String(prNumber), '--body-file', tmpFile],
-            { env: cleanEnv(), cwd: repoRoot },
+            { env: cleanEnv(), cwd: repoRoot, encoding: 'utf-8' },
           )
 
           // Try to extract the comment URL from gh output

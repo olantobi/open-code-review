@@ -1,3 +1,14 @@
+## 1.10.2 (2026-04-03)
+
+### 🩹 Fixes
+
+- **cli:** use platform-safe ESM import and binary execution ([d867733](https://github.com/spencermarx/open-code-review/commit/d867733))
+
+### ❤️ Thank You
+
+- claude-flow @agentic-org
+- Spencer Marx
+
 ## 1.10.1 (2026-04-01)
 
 ### 🩹 Fixes

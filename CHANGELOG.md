@@ -1,3 +1,18 @@
+## 1.10.2 (2026-04-03)
+
+### 🩹 Fixes
+
+- **cli:** use platform-safe ESM import and binary execution ([d867733](https://github.com/spencermarx/open-code-review/commit/d867733))
+- **dashboard:** use platform-safe subprocess calls ([8863cd2](https://github.com/spencermarx/open-code-review/commit/8863cd2))
+- **dashboard:** move health endpoint above auth middleware ([beb9e89](https://github.com/spencermarx/open-code-review/commit/beb9e89))
+- **dashboard:** resolve dev proxy port race condition ([fb9e4c6](https://github.com/spencermarx/open-code-review/commit/fb9e4c6))
+- **platform:** add execBinaryAsync and enforce encoding in signatures ([c0b12d4](https://github.com/spencermarx/open-code-review/commit/c0b12d4))
+
+### ❤️ Thank You
+
+- claude-flow @agentic-org
+- Spencer Marx
+
 ## 1.10.1 (2026-04-01)
 
 ### 🩹 Fixes

@@ -19,13 +19,13 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm nx run-many -t test
 
-  e2e:
-    name: E2E (${{ matrix.os }})
+  e2e-api:
+    name: API E2E (${{ matrix.os }})
     needs: [test]
     strategy:
       fail-fast: false
@@ -37,7 +37,23 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm nx run-many -t e2e
+      - run: pnpm nx e2e cli-e2e
+      - run: pnpm nx e2e dashboard-api-e2e
+
+  e2e-ui:
+    name: UI E2E (Playwright)
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm nx e2e dashboard-ui-e2e

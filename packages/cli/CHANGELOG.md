@@ -1,3 +1,35 @@
+## 1.10.4 (2026-04-07)
+
+### 🩹 Fixes
+
+- **injector:** use h2 heading and backticks in managed block ([91e0ac1](https://github.com/spencermarx/open-code-review/commit/91e0ac1))
+
+### ❤️ Thank You
+
+- Alex @AlexanderWillner
+
+## 1.10.3 (2026-04-03)
+
+### 🩹 Fixes
+
+- **cli:** move @open-code-review/platform to devDependencies ([a5fa8b5](https://github.com/spencermarx/open-code-review/commit/a5fa8b5))
+
+### ❤️ Thank You
+
+- claude-flow @agentic-org
+- Spencer Marx
+
+## 1.10.2 (2026-04-03)
+
+### 🩹 Fixes
+
+- **cli:** use platform-safe ESM import and binary execution ([d867733](https://github.com/spencermarx/open-code-review/commit/d867733))
+
+### ❤️ Thank You
+
+- claude-flow @agentic-org
+- Spencer Marx
+
 ## 1.10.1 (2026-04-01)
 
 ### 🩹 Fixes

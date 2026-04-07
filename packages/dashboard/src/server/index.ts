@@ -91,6 +91,11 @@ if (process.env.NODE_ENV !== 'production') {
   })
 }
 
+// ── Health check (available without auth, before DB init) ──
+app.get('/api/health', (_req, res) => {
+  res.json({ status: 'ok' })
+})
+
 // ── Bearer token middleware for /api/* routes ──
 app.use('/api', (req, res, next) => {
   const authHeader = req.headers.authorization
@@ -127,12 +132,6 @@ if (process.env.NODE_ENV !== 'production') {
   })
 }
 
-// ── Health check (available before DB init) ──
-
-app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok' })
-})
-
 // ── Server startup ──
 
 export type StartServerOptions = {
@@ -155,12 +154,20 @@ export async function startServer(options: StartServerOptions = {}): Promise<voi
   const aiCliService = new AiCliService(ocrDir)
   const db = await openDb(ocrDir)
 
+  // ── Tracking files ──
+  const dataDir = join(ocrDir, 'data')
+  const pidFilePath = join(dataDir, 'dashboard.pid')
+  const portFilePath = join(dataDir, 'server-port')
+  mkdirSync(dataDir, { recursive: true })
+
+  // Remove stale port file immediately so the Vite dev proxy does not
+  // read a leftover port from a previous server instance. The correct
+  // port is written after the server binds successfully.
+  try { unlinkSync(portFilePath) } catch { /* may not exist */ }
+
   // ── PID tracking file ──
   // Write process PID so other tooling can detect an already-running server
   // and clean up orphaned processes.
-  const dataDir = join(ocrDir, 'data')
-  const pidFilePath = join(dataDir, 'dashboard.pid')
-  mkdirSync(dataDir, { recursive: true })
 
   if (existsSync(pidFilePath)) {
     try {
@@ -414,7 +421,6 @@ export async function startServer(options: StartServerOptions = {}): Promise<voi
 
   // Write actual port so the Vite dev proxy can discover it.
   // In dev mode, Vite starts after the server (sleep 2) and reads this file.
-  const portFilePath = join(dataDir, 'server-port')
   writeFileSync(portFilePath, String(actualPort), { mode: 0o600 })
 
   console.log(`  Server:            http://localhost:${actualPort}`)

@@ -1,3 +1,13 @@
+## 1.10.4 (2026-04-07)
+
+### 🩹 Fixes
+
+- **injector:** use h2 heading and backticks in managed block ([91e0ac1](https://github.com/spencermarx/open-code-review/commit/91e0ac1))
+
+### ❤️ Thank You
+
+- Alex @AlexanderWillner
+
 ## 1.10.3 (2026-04-03)
 
 ### 🩹 Fixes

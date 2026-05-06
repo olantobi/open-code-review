@@ -21,10 +21,10 @@
       }
     },
     "test": {
-      "executor": "nx:run-commands",
+      "executor": "@nx/vitest:test",
+      "outputs": ["{workspaceRoot}/coverage/packages/dashboard"],
       "options": {
-        "command": "pnpm test",
-        "cwd": "packages/dashboard"
+        "config": "packages/dashboard/vitest.config.ts"
       }
     }
   }

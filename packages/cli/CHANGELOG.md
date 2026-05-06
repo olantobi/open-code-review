@@ -1,3 +1,52 @@
+## 1.11.0 (2026-05-06)
+
+### 🚀 Features
+
+- **cli/db:** single-owner workflow_id linkage + durable spawn marker ([e3e2b55](https://github.com/spencermarx/open-code-review/commit/e3e2b55))
+- **cli:** shared vendor-resume helper for argv + display strings ([80f7377](https://github.com/spencermarx/open-code-review/commit/80f7377))
+- **cli:** ocr review --resume support ([41ef300](https://github.com/spencermarx/open-code-review/commit/41ef300))
+- **cli:** ocr team resolve/set with three-form schema ([bb290d2](https://github.com/spencermarx/open-code-review/commit/bb290d2))
+- **cli:** ocr models list with bundled fallbacks per vendor ([14753cb](https://github.com/spencermarx/open-code-review/commit/14753cb))
+- **cli:** ocr session subcommands for AI lifecycle journaling ([ca9c8a3](https://github.com/spencermarx/open-code-review/commit/ca9c8a3))
+- **cli/db:** collapse agent_sessions journal into command_executions ([17fb83f](https://github.com/spencermarx/open-code-review/commit/17fb83f))
+
+### ❤️ Thank You
+
+- claude-flow @agentic-org
+- Spencer Marx
+
+## 1.10.4 (2026-04-07)
+
+### 🩹 Fixes
+
+- **injector:** use h2 heading and backticks in managed block ([91e0ac1](https://github.com/spencermarx/open-code-review/commit/91e0ac1))
+
+### ❤️ Thank You
+
+- Alex @AlexanderWillner
+
+## 1.10.3 (2026-04-03)
+
+### 🩹 Fixes
+
+- **cli:** move @open-code-review/platform to devDependencies ([a5fa8b5](https://github.com/spencermarx/open-code-review/commit/a5fa8b5))
+
+### ❤️ Thank You
+
+- claude-flow @agentic-org
+- Spencer Marx
+
+## 1.10.2 (2026-04-03)
+
+### 🩹 Fixes
+
+- **cli:** use platform-safe ESM import and binary execution ([d867733](https://github.com/spencermarx/open-code-review/commit/d867733))
+
+### ❤️ Thank You
+
+- claude-flow @agentic-org
+- Spencer Marx
+
 ## 1.10.1 (2026-04-01)
 
 ### 🩹 Fixes

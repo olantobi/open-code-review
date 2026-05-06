@@ -1,0 +1,55 @@
+name: Cross-Platform Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      os:
+        description: "Target OS"
+        type: choice
+        options:
+          - windows-latest
+          - macos-latest
+          - ubuntu-latest
+        default: windows-latest
+      debug:
+        description: "Open SSH debug session after tests"
+        type: boolean
+        default: false
+
+env:
+  # GitHub requires this to opt into the Node 24 runtime for JavaScript actions.
+  # Without it, actions fall back to Node 20 which may emit deprecation warnings.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  test:
+    name: Test on ${{ inputs.os }}
+    runs-on: ${{ inputs.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm nx run-many -t test
+      - run: pnpm nx e2e cli-e2e
+      - run: pnpm nx e2e dashboard-api-e2e
+
+      - name: Install Playwright (Linux only)
+        if: ${{ inputs.os == 'ubuntu-latest' }}
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: UI E2E (Linux only)
+        if: ${{ inputs.os == 'ubuntu-latest' }}
+        run: pnpm nx e2e dashboard-ui-e2e
+
+      - name: Debug Session (SSH)
+        if: ${{ inputs.debug }}
+        timeout-minutes: 15
+        uses: mxschmitt/action-tmate@v3
+        with:
+          limit-access-to-actor: true

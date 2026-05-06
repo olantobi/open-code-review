@@ -1,0 +1,14 @@
+{
+  "name": "@open-code-review/platform",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Cross-platform utilities for Open Code Review (internal, non-buildable)",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "source": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  }
+}
